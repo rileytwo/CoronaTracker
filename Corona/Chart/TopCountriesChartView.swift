@@ -27,9 +27,9 @@ class TopCountriesChartView: BarChartView {
 		xAxis.labelTextColor = SystemColor.secondaryLabel
 		xAxis.valueFormatter = DefaultAxisValueFormatter(block: { value, axis in
 			guard let entry = self.barData?.dataSets.first?.entryForIndex(Int(value)) as? BarChartDataEntry,
-				let report = entry.data as? Report else { return value.description }
+				let region = entry.data as? Region else { return value.description }
 
-			return report.region.name.replacingOccurrences(of: " ", with: "\n")
+			return region.name.replacingOccurrences(of: " ", with: "\n")
 		})
 
 //		leftAxis.drawGridLinesEnabled = false
@@ -52,8 +52,8 @@ class TopCountriesChartView: BarChartView {
 		noDataFont = .systemFont(ofSize: 15)
 
 		let simpleMarker = SimpleMarkerView(chartView: self) { (entry, highlight) in
-			guard let report = entry.data as? Report else { return entry.y.kmFormatted }
-			return report.stat.description
+			guard let region = entry.data as? Region else { return entry.y.kmFormatted }
+			return region.report?.stat.description ?? entry.y.kmFormatted
 		}
 		simpleMarker.timeout = 5
 		marker = simpleMarker
@@ -73,17 +73,17 @@ class TopCountriesChartView: BarChartView {
 	}
 
 	func update() {
-		let reports = DataManager.instance.topReports
+		let regions = DataManager.instance.topCountries
 
 		var entries = [BarChartDataEntry]()
-		for i in reports.indices {
-			let report = reports[i]
-			var value = Double(report.stat.confirmedCount)
+		for i in regions.indices {
+			let region = regions[i]
+			var value = Double(region.report?.stat.confirmedCount ?? 0)
 			if isLogarithmic {
 				value = log10(value)
 			}
 			let entry = BarChartDataEntry(x: Double(i), y: value)
-			entry.data = report
+			entry.data = region
 			entries.append(entry)
 		}
 
@@ -95,8 +95,8 @@ class TopCountriesChartView: BarChartView {
 		dataSet.valueTextColor = SystemColor.secondaryLabel
 		dataSet.valueFont = .systemFont(ofSize: 12, weight: .regular)
 		dataSet.valueFormatter = DefaultValueFormatter(block: { value, entry, dataSetIndex, viewPortHandler in
-			guard let report = entry.data as? Report else { return value.kmFormatted }
-			return report.stat.confirmedCount.kmFormatted
+			guard let region = entry.data as? Region else { return value.kmFormatted }
+			return region.report?.stat.confirmedCount.kmFormatted ?? value.kmFormatted
 		})
 
 		if isLogarithmic {

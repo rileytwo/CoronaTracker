@@ -16,6 +16,8 @@ class CurrentStateChartView: PieChartView {
 
 		usePercentValuesEnabled = true
 		holeColor = nil
+		holeRadiusPercent = 0.5
+		transparentCircleRadiusPercent = 0.6
 		rotationAngle = 0
 		drawEntryLabelsEnabled = false
 		setExtraOffsets(left: 0, top: 5, right: 0, bottom: -10)
@@ -44,7 +46,7 @@ class CurrentStateChartView: PieChartView {
 		}
 
 		var dataEntries: [PieChartDataEntry] = []
-		dataEntries.append(PieChartDataEntry(value: Double(report.stat.existingCount), label: "Existing"))
+		dataEntries.append(PieChartDataEntry(value: Double(report.stat.activeCount), label: "Active"))
 		dataEntries.append(PieChartDataEntry(value: Double(report.stat.deathCount), label: "Deaths"))
 		dataEntries.append(PieChartDataEntry(value: Double(report.stat.recoveredCount), label: "Recovered"))
 

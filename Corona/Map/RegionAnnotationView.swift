@@ -1,5 +1,5 @@
 //
-//  ReportAnnotationView.swift
+//  RegionAnnotationView.swift
 //  Corona
 //
 //  Created by Mohammad on 3/4/20.
@@ -8,8 +8,8 @@
 
 import MapKit
 
-class ReportAnnotationView: MKAnnotationView {
-	static let reuseIdentifier = String(describing: ReportAnnotation.self)
+class RegionAnnotationView: MKAnnotationView {
+	static let reuseIdentifier = String(describing: RegionAnnotationView.self)
 
 	private lazy var countLabel: UILabel = {
 		let countLabel = UILabel()
@@ -26,22 +26,22 @@ class ReportAnnotationView: MKAnnotationView {
 	}()
 
 	private var radius: CGFloat {
-		guard let annotation = annotation as? ReportAnnotation else { return 1 }
-		let number = CGFloat(annotation.report.stat.confirmedCount)
+		guard let annotation = annotation as? RegionAnnotation else { return 1 }
+		let number = CGFloat(annotation.region.report?.stat.confirmedCount ?? 0)
 		return 10 + log( 1 + number) * CGFloat(mapZoomLevel - 2.2)
 	}
 
 	private var color: UIColor {
-		guard let annotation = annotation as? ReportAnnotation else { return .clear }
-		let number = CGFloat(annotation.report.stat.confirmedCount)
+		guard let annotation = annotation as? RegionAnnotation else { return .clear }
+		let number = CGFloat(annotation.region.report?.stat.confirmedCount ?? 0)
 		let level = log10(number + 10) * 2
 		let brightness = max(0, 255 - level * 40) / 255;
 		let saturation = brightness > 0 ? 1 : max(0, 255 - ((level * 40) - 255)) / 255;
 		return UIColor(red: saturation, green: brightness, blue: brightness * 0.4, alpha: 0.8)
 	}
 
-	var report: Report? {
-		(annotation as? ReportAnnotation)?.report
+	var region: Region? {
+		(annotation as? RegionAnnotation)?.region
 	}
 
 	private var detailsString: NSAttributedString? {
@@ -52,15 +52,15 @@ class ReportAnnotationView: MKAnnotationView {
 
 		let string = NSMutableAttributedString()
 		string.append(.init(string: "Confirmed: "))
-		string.append(.init(string: report?.stat.confirmedCountString ?? "",
+		string.append(.init(string: region?.report?.stat.confirmedCountString ?? "",
 			attributes: [.foregroundColor: UIColor.systemOrange, .font: boldFont]))
 
 		string.append(.init(string: "\nRecovered: "))
-		string.append(.init(string: report?.stat.recoveredCountString ?? "",
+		string.append(.init(string: region?.report?.stat.recoveredCountString ?? "",
 			attributes: [.foregroundColor : UIColor.systemGreen, .font: boldFont]))
 
 		string.append(.init(string: "\nDeath: "))
-		string.append(.init(string: report?.stat.deathCountString ?? "",
+		string.append(.init(string: region?.report?.stat.deathCountString ?? "",
 			attributes: [.foregroundColor : UIColor.systemRed, .font: boldFont]))
 
 		return string
@@ -79,20 +79,23 @@ class ReportAnnotationView: MKAnnotationView {
 	override var annotation: MKAnnotation? {
 		didSet {
 			configure()
+            
+			/// Ensure that the report text is set each time the annotation is updated
+			detailAccessoryView?.attributedText = detailsString
 		}
 	}
 
 	private lazy var rightAccessoryView: UIView? = {
 		let button = UIButton(type: .detailDisclosure)
 		button.addAction {
-			MapController.instance.updateRegionScreen(report: self.report)
+			MapController.instance.updateRegionScreen(region: self.region)
 			MapController.instance.showRegionScreen()
 		}
 		return button
 	}()
 	override var rightCalloutAccessoryView: UIView? { get { rightAccessoryView } set {} }
 
-	private lazy var detailAccessoryView: UIView? = {
+	private lazy var detailAccessoryView: UILabel? = {
 		let label = UILabel()
 		label.textColor = .systemGray
 		label.font = UIFont(descriptor: .preferredFontDescriptor(withTextStyle: .footnote), size: 0)
@@ -116,9 +119,9 @@ class ReportAnnotationView: MKAnnotationView {
 	}
 
 	func configure() {
-		guard let report = report else { return }
+		guard let region = region else { return }
 		if self.mapZoomLevel > 4 {
-			self.countLabel.text = report.stat.confirmedCountString
+			self.countLabel.text = region.report?.stat.confirmedCountString
 			self.countLabel.font = .boldSystemFont(ofSize: 13 * max(1, log(self.mapZoomLevel - 2)))
 			self.countLabel.alpha = 1
 		}
@@ -140,7 +143,7 @@ class ReportAnnotationView: MKAnnotationView {
 	}
 }
 
-extension ReportAnnotationView { // Pressable view
+extension RegionAnnotationView { // Pressable view
 	private func setTouched(_ isTouched: Bool) {
 		let scale = 0.9 + 0.06 * max(1, self.frame.width / 400)
 		let transform = isTouched ? CGAffineTransform(scaleX: scale, y: scale) : .identity

@@ -9,6 +9,18 @@
 import UIKit
 
 class RegionContainerController: UIViewController {
+	private lazy var buttonDone: UIButton = {
+		let button = UIButton(type: .system)
+		button.titleLabel?.font = .boldSystemFont(ofSize: 17)
+		button.setTitle("Done", for: .normal)
+		button.addTarget(self, action: #selector(buttonDoneTapped(_:)), for: .touchUpInside)
+		viewHeader.addSubview(button)
+		button.translatesAutoresizingMaskIntoConstraints = false
+		button.trailingAnchor.constraint(equalTo: viewHeader.trailingAnchor, constant: -18).isActive = true
+		button.centerYAnchor.constraint(equalTo: searchBar.centerYAnchor).isActive = true
+		return button
+	}()
+
 	var regionListController: RegionListController!
 	var regionController: RegionController!
 	var isUpdating: Bool = false {
@@ -22,18 +34,19 @@ class RegionContainerController: UIViewController {
 			view.transition(duration: 0.25) {
 				self.labelTitle.isHidden = self.isSearching
 				self.labelUpdated.isHidden = self.isSearching
+				self.buttonMenu.isHidden = self.isSearching
 				self.buttonSearch.isHidden = self.isSearching
 				self.searchBar.isHidden = !self.isSearching
 				self.regionListController.view.superview?.isHidden = !self.isSearching
 				self.regionController.view.isHidden = self.isSearching
 
 				if self.isSearching {
-					self.regionListController.reports = DataManager.instance.allReports
+					self.regionListController.regions = DataManager.instance.regions(of: .province).sorted().reversed()
 					self.searchBar.text = ""
 					self.searchBar.becomeFirstResponder()
 					MapController.instance.showRegionScreen()
 				} else {
-					self.regionListController.reports = []
+					self.regionListController.regions = []
 					self.searchBar.resignFirstResponder()
 				}
 			}
@@ -42,8 +55,10 @@ class RegionContainerController: UIViewController {
 
 	@IBOutlet var effectViewBackground: UIVisualEffectView!
 	@IBOutlet var effectViewHeader: UIVisualEffectView!
+	@IBOutlet var viewHeader: UIView!
 	@IBOutlet var labelTitle: UILabel!
 	@IBOutlet var labelUpdated: UILabel!
+	@IBOutlet var buttonMenu: UIButton!
 	@IBOutlet var buttonSearch: UIButton!
 	@IBOutlet var searchBar: UISearchBar!
 
@@ -81,10 +96,20 @@ class RegionContainerController: UIViewController {
 		}
 	}
 
-	func update(report: Report?) {
-		UIView.transition(with: view, duration: 0.25, options: [.transitionCrossDissolve], animations: {
-			self.labelTitle.text = report?.region.name ?? "No data"
-		}, completion: nil)
+	override func setEditing(_ editing: Bool, animated: Bool) {
+		super.setEditing(editing, animated: animated)
+
+		viewHeader.transition(duration: 0.25) {
+			self.buttonDone.isHidden = !editing
+			self.buttonMenu.isHidden = editing
+			self.buttonSearch.isHidden = editing
+		}
+	}
+
+	func update(region: Region?) {
+		viewHeader.transition(duration: 0.25) {
+			self.labelTitle.text = region?.longName ?? "N/A"
+		}
 
 		updateTime()
 	}
@@ -95,11 +120,41 @@ class RegionContainerController: UIViewController {
 			return
 		}
 
-		self.labelUpdated.text = self.regionController.report?.lastUpdate.relativeTimeString
+		self.labelUpdated.text = self.regionController.region?.report?.lastUpdate.relativeTimeString
 	}
 
+	func snapshotHeader(hideTitle: Bool = false) -> UIImage {
+		if hideTitle {
+			labelTitle.isHidden = true
+		}
+		buttonDone.isHidden = true
+		let image = viewHeader.snapshot()
+		labelTitle.isHidden = false
+
+		return image
+	}
+}
+
+extension RegionContainerController {
 	@IBAction func buttonSearchTapped(_ sender: Any) {
 		isSearching = true
+	}
+
+	@IBAction func buttonMenuTapped(_ sender: Any) {
+		Menu.show(above: self, sourceView: buttonMenu, items: [
+			MenuItem(title: "Update", image: UIImage(named: "Reload")!, action: {
+				MapController.instance.downloadIfNeeded()
+			}),
+			MenuItem(title: "Share", image: UIImage(named: "Share")!, action: {
+				MapController.instance.showRegionScreen()
+				self.regionController.setEditing(true, animated: true)
+			}),
+		])
+	}
+
+	@objc func buttonDoneTapped(_ sender: Any) {
+		setEditing(false, animated: true)
+		regionController.setEditing(false, animated: true)
 	}
 }
 
@@ -109,27 +164,27 @@ extension RegionContainerController: UISearchBarDelegate, UITableViewDelegate {
 	}
 
 	func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-		var reports = DataManager.instance.allReports
+		var regions: [Region] = DataManager.instance.regions(of: .province).sorted().reversed()
 
 		let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 		if !query.isEmpty {
-			reports = reports.filter({ report in
-				report.region.name.lowercased().contains(query)
+			regions = regions.filter({ region in
+				region.longName.lowercased().contains(query)
 			})
 		}
 
-		regionListController.reports = reports
+		regionListController.regions = regions
 	}
 
 	func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-		let report = regionListController.reports[indexPath.row]
+		let region = regionListController.regions[indexPath.row]
 
-		regionController.report = report
+		regionController.region = region
 		regionController.update()
 
 		isSearching = false
 
 		MapController.instance.hideRegionScreen()
-		MapController.instance.showRegionOnMap(report: report)
+		MapController.instance.showRegionOnMap(region: region)
 	}
 }

@@ -10,6 +10,11 @@ import UIKit
 import NotificationCenter
 
 class TodayViewController: UIViewController, NCWidgetProviding {
+	static let numberPercentSwitchInterval: TimeInterval = 3 /// Seconds
+
+	private var report: Report?
+	private var showPercents = false
+	private var switchPercentsTask: DispatchWorkItem?
 
 	@IBOutlet var worldwideTitleLabel: UILabel!
     @IBOutlet var confirmedCountLabel: UILabel!
@@ -25,8 +30,9 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 
         initializeView()
 
-		DataManager.instance.load(reportsOnly: true) { [weak self] success in
-			self?.update(report: DataManager.instance.worldwideReport)
+		DataManager.instance.load { [weak self] success in
+			self?.report = DataManager.instance.world.report
+			self?.update()
 		}
     }
 
@@ -35,10 +41,11 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 		updateTimeLabel.isHidden = true
         DataManager.instance.download { [weak self] success in
             completionHandler(success ? NCUpdateResult.newData : NCUpdateResult.failed)
-            DataManager.instance.load(reportsOnly: true) { [weak self] success in
+            DataManager.instance.load { [weak self] success in
+				self?.report = DataManager.instance.world.report
                 self?.activityIndicatorView.stopAnimating()
 				self?.updateTimeLabel.isHidden = false
-                self?.update(report: DataManager.instance.worldwideReport)
+                self?.update()
             }
         }
     }
@@ -46,7 +53,6 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 	private func initializeView() {
 		dataViews.forEach { view in
 			view.layer.cornerRadius = 8
-//			view.isHidden = true
 		}
 		dataLabels.forEach { label in
 			label.textColor = .white
@@ -57,7 +63,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 		}
 	}
 
-    private func update(report: Report?) {
+    private func update() {
         guard let report = report else {
             return
         }
@@ -69,6 +75,33 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 			self?.updateTimeLabel.text = report.lastUpdate.relativeTimeString
 		}
 
-//		dataViews.forEach({ $0.isHidden = false })
+		updateStats()
     }
+
+	private func updateStats(reset: Bool = false) {
+		switchPercentsTask?.cancel()
+		let task = DispatchWorkItem { [weak self] in
+			self?.showPercents = !(self?.showPercents ?? false)
+			self?.updateStats()
+		}
+		DispatchQueue.main.asyncAfter(deadline: .now() + Self.numberPercentSwitchInterval, execute: task)
+		switchPercentsTask = task
+
+		if reset {
+			showPercents = false
+			return
+		}
+
+		guard let report = report else { return }
+		recoveredCountLabel.transition { [weak self] in
+			self?.recoveredCountLabel.text = self?.showPercents == true ?
+				report.stat.recoveredPercent.percentFormatted :
+				report.stat.recoveredCountString
+		}
+		deathsCountLabel.transition { [weak self] in
+			self?.deathsCountLabel.text = self?.showPercents == true ?
+				report.stat.deathPercent.percentFormatted :
+				report.stat.deathCountString
+		}
+	}
 }

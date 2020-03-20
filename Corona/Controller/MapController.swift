@@ -17,9 +17,9 @@ class MapController: UIViewController {
 
 	static var instance: MapController!
 
-	private var allAnnotations: [ReportAnnotation] = []
-	private var countryAnnotations: [ReportAnnotation] = []
-	private var currentAnnotations: [ReportAnnotation] = []
+	private var allAnnotations: [RegionAnnotation] = []
+	private var countryAnnotations: [RegionAnnotation] = []
+	private var currentAnnotations: [RegionAnnotation] = []
 
 	private var panelController: FloatingPanelController!
 	private var regionContainerController: RegionContainerController!
@@ -70,8 +70,8 @@ class MapController: UIViewController {
 
 		if #available(iOS 11.0, *) {
 			mapView.mapType = .mutedStandard
-			mapView.register(ReportAnnotationView.self,
-							 forAnnotationViewWithReuseIdentifier: ReportAnnotationView.reuseIdentifier)
+			mapView.register(RegionAnnotationView.self,
+							 forAnnotationViewWithReuseIdentifier: RegionAnnotationView.reuseIdentifier)
 		}
 	}
 
@@ -88,10 +88,14 @@ class MapController: UIViewController {
 		panelController.track(scrollView: regionContainerController.regionController.tableView)
 		panelController.surfaceView.backgroundColor = .clear
 		panelController.surfaceView.contentView.backgroundColor = .clear
+
+		#if targetEnvironment(macCatalyst)
+		panelController.additionalSafeAreaInsets = .init(top: 0, left: 0, bottom: 10, right: 0)
+		#endif
 	}
 
-	func updateRegionScreen(report: Report?) {
-		regionContainerController.regionController.report = report
+	func updateRegionScreen(region: Region?) {
+		regionContainerController.regionController.region = region
 		regionContainerController.regionController.update()
 	}
 
@@ -103,33 +107,33 @@ class MapController: UIViewController {
 		panelController.move(to: .half, animated: true)
 	}
 
-	func showRegionOnMap(report: Report) {
-		let region = MKCoordinateRegion(center: report.region.location.clLocation,
-										span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12))
-		mapView.setRegion(region, animated: true)
+	func showRegionOnMap(region: Region) {
+		let coordinateRegion = MKCoordinateRegion(center: region.location.clLocation,
+												  span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12))
+		mapView.setRegion(coordinateRegion, animated: true)
 
 		DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-			if let annotation = self.currentAnnotations.first(where: { $0.report.region == report.region }) {
+			if let annotation = self.currentAnnotations.first(where: { $0.region == region }) {
 				self.mapView.selectAnnotation(annotation, animated: true)
 			}
 		}
 	}
 
 	private func update() {
-		allAnnotations = DataManager.instance.allReports
-			.filter({ $0.stat.confirmedCount > 0 })
-			.map({ ReportAnnotation(report: $0) })
+		allAnnotations = DataManager.instance.regions(of: .province)
+			.filter({ $0.report?.stat.confirmedCount ?? 0 > 0 })
+			.map({ RegionAnnotation(region: $0) })
 
-		countryAnnotations = DataManager.instance.countryReports
-			.filter({ $0.stat.confirmedCount > 0 })
-			.map({ ReportAnnotation(report: $0) })
+		countryAnnotations = DataManager.instance.regions(of: .country)
+			.filter({ $0.report?.stat.confirmedCount ?? 0 > 0 })
+			.map({ RegionAnnotation(region: $0) })
 
 		currentAnnotations = mapView.zoomLevel > Self.cityZoomLevel ? allAnnotations : countryAnnotations
 
 		mapView.removeAnnotations(mapView.annotations)
 		mapView.addAnnotations(currentAnnotations)
 
-		regionContainerController.regionController.report = nil
+		regionContainerController.regionController.region = nil
 		regionContainerController.regionController.update()
 	}
 
@@ -171,7 +175,7 @@ class MapController: UIViewController {
 	@IBAction func buttonUpdateTapped(_ sender: Any) {
 		let alertController = UIAlertController.init(
 			title: "New Version Available",
-			message: "Please update from https://github.com/MhdHejazi/CoronaTracker",
+			message: "Please update from \(App.updateURL.absoluteString)",
 			preferredStyle: .alert)
 
 		#if targetEnvironment(macCatalyst)
@@ -195,18 +199,18 @@ extension MapController: MKMapViewDelegate {
 			return nil
 		}
 
-		var annotationView: ReportAnnotationView
+		var annotationView: RegionAnnotationView
 		if #available(iOS 11.0, *) {
 			guard let view = mapView.dequeueReusableAnnotationView(
-				withIdentifier: ReportAnnotationView.reuseIdentifier,
-				for: annotation) as? ReportAnnotationView else { return nil }
+				withIdentifier: RegionAnnotationView.reuseIdentifier,
+				for: annotation) as? RegionAnnotationView else { return nil }
 			annotationView = view
 		} else {
 			/// iOS 10
 			let view = mapView.dequeueReusableAnnotationView(
-				withIdentifier: ReportAnnotationView.reuseIdentifier) as? ReportAnnotationView
-			annotationView = view ?? ReportAnnotationView(annotation: annotation,
-														  reuseIdentifier: ReportAnnotationView.reuseIdentifier)
+				withIdentifier: RegionAnnotationView.reuseIdentifier) as? RegionAnnotationView
+			annotationView = view ?? RegionAnnotationView(annotation: annotation,
+														  reuseIdentifier: RegionAnnotationView.reuseIdentifier)
 		}
 
 		annotationView.mapZoomLevel = mapView.zoomLevel
@@ -216,7 +220,7 @@ extension MapController: MKMapViewDelegate {
 
 	func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
 		for annotation in currentAnnotations {
-			if let view = mapView.view(for: annotation) as? ReportAnnotationView {
+			if let view = mapView.view(for: annotation) as? RegionAnnotationView {
 				view.mapZoomLevel = mapView.zoomLevel
 			}
 		}
@@ -240,11 +244,11 @@ extension MapController: MKMapViewDelegate {
 	}
 
 	func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-		updateRegionScreen(report: (view as? ReportAnnotationView)?.report)
+		updateRegionScreen(region: (view as? RegionAnnotationView)?.region)
 	}
 
 	func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
-		updateRegionScreen(report: nil)
+		updateRegionScreen(region: nil)
 	}
 }
 
@@ -273,7 +277,7 @@ class PanelLayout: FloatingPanelLayout {
 	public func insetFor(position: FloatingPanelPosition) -> CGFloat? {
 		switch position {
 		case .full: return 16
-		case .half: return 185
+		case .half: return 215
 		case .tip: return 68
 		default: return nil
 		}

@@ -14,26 +14,25 @@ import Charts
 class RegionController: UITableViewController {
 	static let numberPercentSwitchInterval: TimeInterval = 3 /// Seconds
 
-	var report: Report? {
+	var region: Region? {
 		didSet {
-			if report == nil {
-				report = DataManager.instance.worldwideReport
-			}
-
-			if let region = report?.region {
-				timeSeries = DataManager.instance.timeSeries(for: region)
+			if region == nil {
+				region = DataManager.instance.world
 			}
 		}
 	}
-	private var timeSeries: TimeSeries?
 	private var showPercents = false
 	private var switchPercentsTask: DispatchWorkItem?
+	private var container: RegionContainerController? { parent as? RegionContainerController }
 
 	@IBOutlet var stackViewStats: UIStackView!
 	@IBOutlet var labelTitle: UILabel!
 	@IBOutlet var labelConfirmed: UILabel!
 	@IBOutlet var labelRecovered: UILabel!
 	@IBOutlet var labelDeaths: UILabel!
+	@IBOutlet var labelNewConfirmed: UILabel!
+	@IBOutlet var labelNewRecovered: UILabel!
+	@IBOutlet var labelNewDeaths: UILabel!
 	@IBOutlet var chartViewCurrent: CurrentStateChartView!
 	@IBOutlet var chartViewHistory: HistoryChartView!
 	@IBOutlet var chartViewTopCountries: TopCountriesChartView!
@@ -66,20 +65,26 @@ class RegionController: UITableViewController {
 	}
 
 	func update() {
-		if report == nil {
-			report = DataManager.instance.worldwideReport
+		if region == nil {
+			region = DataManager.instance.world
 		}
 
 		UIView.transition(with: stackViewStats, duration: 0.25, options: [.transitionCrossDissolve], animations: {
-			self.labelTitle.text = self.report?.region.name ?? "-"
-			self.labelConfirmed.text = self.report?.stat.confirmedCountString ?? "-"
-			self.labelRecovered.text = self.report?.stat.recoveredCountString ?? "-"
-			self.labelDeaths.text = self.report?.stat.deathCountString ?? "-"
-			self.labelUpdated.text = "Last updated: \(self.report?.lastUpdate.relativeDateString ?? "-")"
+			self.labelTitle.text = self.region?.longName ?? "-"
+
+			self.labelConfirmed.text = self.region?.report?.stat.confirmedCountString ?? "-"
+			self.labelRecovered.text = self.region?.report?.stat.recoveredCountString ?? "-"
+			self.labelDeaths.text = self.region?.report?.stat.deathCountString ?? "-"
+
+			self.labelNewConfirmed.text = self.region?.dailyChange?.newConfirmedString ?? "-"
+			self.labelNewRecovered.text = self.region?.dailyChange?.newRecoveredString ?? "-"
+			self.labelNewDeaths.text = self.region?.dailyChange?.newDeathsString ?? "-"
+
+			self.labelUpdated.text = "Last updated: \(self.region?.report?.lastUpdate.relativeDateString ?? "-")"
 		}, completion: nil)
 
-		chartViewCurrent.update(report: report)
-		chartViewHistory.update(series: timeSeries)
+		chartViewCurrent.update(report: region?.report)
+		chartViewHistory.update(series: region?.timeSeries)
 		chartViewTopCountries.update()
 
 		updateParent()
@@ -101,8 +106,7 @@ class RegionController: UITableViewController {
 			return
 		}
 
-		guard let report = report else { return }
-
+		guard let report = region?.report else { return }
 		labelRecovered.transition {
 			self.labelRecovered.text = self.showPercents ?
 				report.stat.recoveredPercent.percentFormatted :
@@ -113,11 +117,61 @@ class RegionController: UITableViewController {
 				report.stat.deathPercent.percentFormatted :
 				report.stat.deathCountString
 		}
+		labelNewConfirmed.transition {
+			self.labelNewConfirmed.text = self.showPercents ?
+				self.region?.dailyChange?.confirmedGrowthString ?? "-" :
+				self.region?.dailyChange?.newConfirmedString ?? "-"
+		}
+		labelNewRecovered.transition {
+			self.labelNewRecovered.text = self.showPercents ?
+				self.region?.dailyChange?.recoveredGrowthString ?? "-" :
+				self.region?.dailyChange?.newRecoveredString ?? "-"
+		}
+		labelNewDeaths.transition {
+			self.labelNewDeaths.text = self.showPercents ?
+				self.region?.dailyChange?.deathsGrowthString ?? "-" :
+				self.region?.dailyChange?.newDeathsString ?? "-"
+		}
 	}
 
 	func updateParent() {
-		(parent as? RegionContainerController)?.update(report: report)
+		container?.update(region: region)
 	}
+
+	private func shareImage(for cell: RegionInfoCell?) {
+		guard let cell = cell, let row = cell.row else { return }
+
+		let cellImage = cell.snapshot()
+		let headerImage = container!.snapshotHeader(hideTitle: row == .chartTop)
+		var logoImage = UIImage(named: "Icon-Small")
+		if #available(iOS 13.0, *) {
+			logoImage = logoImage?.withTintColor(SystemColor.secondaryLabel)
+		}
+
+		let newSize = CGSize(width: cellImage.size.width, height: cellImage.size.height + headerImage.size.height)
+		let newBounds = CGRect(origin: .zero, size: newSize)
+		let image = UIGraphicsImageRenderer(bounds: newBounds).image { rendererContext in
+			SystemColor.secondarySystemBackground.setFill()
+			rendererContext.fill(newBounds)
+
+			headerImage.draw(at: .zero)
+			logoImage?.draw(at: .init(x: headerImage.size.width - 60, y: 22))
+			cellImage.draw(at: .init(x: 0, y: headerImage.size.height))
+		}
+
+		var items: [Any] = [ImageItemSource(image: image, imageName: "Corona Tracker")]
+		items.append(TextItemSource(text: row.title))
+
+		let activityController = UIActivityViewController(activityItems: items, applicationActivities: nil)
+
+		if UIDevice.current.userInterfaceIdiom == .pad {
+			activityController.modalPresentationStyle = .popover
+			activityController.popoverPresentationController?.sourceView = cell
+			activityController.popoverPresentationController?.sourceRect = cell.bounds
+		}
+		present(activityController, animated: true, completion: nil)
+	}
+
 }
 
 extension RegionController {
@@ -137,5 +191,115 @@ extension RegionController {
 		let safariController = SFSafariViewController(url: url)
 		safariController.modalPresentationStyle = .pageSheet
 		present(safariController, animated: true)
+	}
+}
+
+extension RegionController {
+	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+		let cell = super.tableView(tableView, cellForRowAt: indexPath)
+		if let cell = cell as? RegionInfoCell {
+			cell.shareAction = {
+				self.setEditing(false, animated: true)
+				self.shareImage(for: cell)
+			}
+		}
+		return cell
+	}
+
+	override func tableView(_ tableView: UITableView, shouldIndentWhileEditingRowAt indexPath: IndexPath) -> Bool {
+		false
+	}
+
+	override func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+		.none
+	}
+
+	@available(iOS 11.0, *)
+	override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+		let cell = tableView.cellForRow(at: indexPath) as? RegionInfoCell
+		let action = UIContextualAction(style: .normal, title: nil) { action, sourceView, completion in
+			completion(true)
+			self.shareImage(for: cell)
+		}
+		action.image = UIImage(named: "Share-Circle")
+		action.backgroundColor = UIColor.black.withAlphaComponent(0.001)
+
+		let config = UISwipeActionsConfiguration(actions: [action])
+		return config
+	}
+
+	override func setEditing(_ editing: Bool, animated: Bool) {
+		super.setEditing(editing, animated: animated)
+
+		container?.setEditing(editing, animated: animated)
+	}
+}
+
+class RegionInfoCell: UITableViewCell {
+	enum Row: Int, RawRepresentable {
+		case stats = 1
+		case chartCurrent = 2
+		case chartHistory = 3
+		case chartTop = 4
+
+		var title: String {
+			switch self {
+			case .stats: return "Coronavirus live update (via CoronaTracker)"
+			case .chartCurrent: return "Coronavirus live update (via CoronaTracker)"
+			case .chartHistory: return "Coronavirus growth chart (via CoronaTracker)"
+			case .chartTop: return "Top affected countries (via CoronaTracker)"
+			}
+		}
+	}
+
+	private lazy var buttonShare: UIButton = {
+		let button = UIButton(type: .custom)
+		button.setImage(UIImage(named: "Share-Circle"), for: .normal)
+		button.translatesAutoresizingMaskIntoConstraints = false
+		button.widthAnchor.constraint(equalToConstant: 50).isActive = true
+		button.heightAnchor.constraint(equalToConstant: 50).isActive = true
+		button.transform = .init(scaleX: 0.1, y: 0.1)
+		button.alpha = 0
+		button.addAction {
+			self.shareAction?()
+		}
+		return button
+	}()
+	var shareAction: (() -> Void)? = nil
+
+	@IBInspectable var rowNumber: Int = 0
+	var row: Row? { Row(rawValue: rowNumber) }
+
+	override func awakeFromNib() {
+		super.awakeFromNib()
+
+		clipsToBounds = false
+		contentView.clipsToBounds = false
+
+		contentView.addSubview(buttonShare)
+		buttonShare.centerYAnchor.constraint(equalTo: contentView.centerYAnchor).isActive = true
+		buttonShare.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -15).isActive = true
+	}
+
+	override func setEditing(_ editing: Bool, animated: Bool) {
+		super.setEditing(editing, animated: animated)
+
+		guard superview is UITableView else { return }
+
+		UIView.animate(withDuration: editing ? 0.5 : 0.25,
+					   delay: 0,
+					   usingSpringWithDamping: editing ? 0.7 : 2,
+					   initialSpringVelocity: 0,
+					   options: [],
+					   animations: {
+
+			let scale: CGFloat = editing ? 1 : 0.1
+			let alpha: CGFloat = editing ? 1 : 0
+			self.buttonShare.transform = .init(scaleX: scale, y: scale)
+			self.buttonShare.alpha = alpha
+			self.contentView.subviews.filter({ $0 !== self.buttonShare }).forEach { subview in
+				subview.transform = editing ? .init(translationX: -self.buttonShare.bounds.width - 15, y: 0) : .identity
+			}
+		})
 	}
 }

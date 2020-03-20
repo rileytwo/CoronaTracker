@@ -86,6 +86,10 @@ extension Date {
 	}
 }
 
+extension TimeZone {
+	public static let utc = TimeZone(identifier: "UTC")!
+}
+
 extension Double {
 	public var kmFormatted: String {
 		if self >= 10_000, self < 1_000_000 {
@@ -106,6 +110,12 @@ extension Double {
 
 extension Int {
 	public var kmFormatted: String { Double(self).kmFormatted }
+
+	public var groupingFormatted: String {
+		NumberFormatter.groupingFormatter.string(from: NSNumber(value: self))!
+	}
+
+	public static func random() -> Int { random(in: 1..<max) }
 }
 
 extension NumberFormatter {
@@ -123,5 +133,14 @@ extension NumberFormatter {
 		formatter.maximumFractionDigits = 1
 		formatter.multiplier = 1
 		return formatter
+	}()
+}
+
+extension FileManager {
+	static let cachesDirectoryURL: URL? = {
+		return try? FileManager.default.url(for: .cachesDirectory,
+											in: .userDomainMask,
+											appropriateFor: nil,
+											create: true)
 	}()
 }
