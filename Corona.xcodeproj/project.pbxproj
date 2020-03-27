@@ -34,10 +34,6 @@
 		115186AC241FAFCE00EBC83E /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11518696241FAECB00EBC83E /* DataService.swift */; };
 		115186AD241FAFCE00EBC83E /* JHUWebDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11518697241FAECB00EBC83E /* JHUWebDataService.swift */; };
 		115186AE241FAFCE00EBC83E /* JHURepoDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11518698241FAECB00EBC83E /* JHURepoDataService.swift */; };
-		115186B1241FAFF300EBC83E /* Disk in Frameworks */ = {isa = PBXBuildFile; productRef = 115186B0241FAFF300EBC83E /* Disk */; };
-		115186B4241FB00000EBC83E /* CSV in Frameworks */ = {isa = PBXBuildFile; productRef = 115186B3241FB00000EBC83E /* CSV */; };
-		115186B6241FB03F00EBC83E /* Disk in Frameworks */ = {isa = PBXBuildFile; productRef = 115186B5241FB03F00EBC83E /* Disk */; };
-		115186B8241FB04200EBC83E /* CSV in Frameworks */ = {isa = PBXBuildFile; productRef = 115186B7241FB04200EBC83E /* CSV */; };
 		115186B9241FB31B00EBC83E /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1151869B241FAF6200EBC83E /* Extensions.swift */; };
 		115186BA242005E900EBC83E /* SystemColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111C76B52412C90500368F08 /* SystemColor.swift */; };
 		115186C024203D5100EBC83E /* Change.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115186BE242019EE00EBC83E /* Change.swift */; };
@@ -67,6 +63,14 @@
 		344ED328241AC7AA004C4EA8 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 344ED326241AC7AA004C4EA8 /* MainInterface.storyboard */; };
 		344ED32C241AC7AA004C4EA8 /* Widget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 344ED31F241AC7AA004C4EA8 /* Widget.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		344ED333241ACCC9004C4EA8 /* TodayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344ED324241AC7AA004C4EA8 /* TodayViewController.swift */; };
+		BF878049242E805500A56CE2 /* CSV in Frameworks */ = {isa = PBXBuildFile; productRef = BF878048242E805500A56CE2 /* CSV */; };
+		BF87804E242E807E00A56CE2 /* Disk in Frameworks */ = {isa = PBXBuildFile; productRef = BF87804D242E807E00A56CE2 /* Disk */; };
+		BF878050242E809100A56CE2 /* Disk in Frameworks */ = {isa = PBXBuildFile; productRef = BF87804F242E809100A56CE2 /* Disk */; };
+		BF878053242E816E00A56CE2 /* Disk in Embed Frameworks */ = {isa = PBXBuildFile; productRef = BF87804F242E809100A56CE2 /* Disk */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BF878054242E818300A56CE2 /* CSV in Embed Frameworks */ = {isa = PBXBuildFile; productRef = BF878048242E805500A56CE2 /* CSV */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BF878056242E818400A56CE2 /* Disk in Embed Frameworks */ = {isa = PBXBuildFile; productRef = BF87804D242E807E00A56CE2 /* Disk */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BF878058242E819100A56CE2 /* CSV in Frameworks */ = {isa = PBXBuildFile; productRef = BF878057242E819100A56CE2 /* CSV */; };
+		BF878059242E819100A56CE2 /* CSV in Embed Frameworks */ = {isa = PBXBuildFile; productRef = BF878057242E819100A56CE2 /* CSV */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +93,30 @@
 				344ED32C241AC7AA004C4EA8 /* Widget.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF878052242E816C00A56CE2 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				BF878053242E816E00A56CE2 /* Disk in Embed Frameworks */,
+				BF878059242E819100A56CE2 /* CSV in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF878055242E818300A56CE2 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				BF878054242E818300A56CE2 /* CSV in Embed Frameworks */,
+				BF878056242E818400A56CE2 /* Disk in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -147,9 +175,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				11BF32AA24156AE500270130 /* FloatingPanel in Frameworks */,
-				115186B1241FAFF300EBC83E /* Disk in Frameworks */,
 				1195F1A5241EC1FB00FE718F /* Charts in Frameworks */,
-				115186B4241FB00000EBC83E /* CSV in Frameworks */,
+				BF878049242E805500A56CE2 /* CSV in Frameworks */,
+				BF87804E242E807E00A56CE2 /* Disk in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,9 +185,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				115186B8241FB04200EBC83E /* CSV in Frameworks */,
+				BF878058242E819100A56CE2 /* CSV in Frameworks */,
+				BF878050242E809100A56CE2 /* Disk in Frameworks */,
 				344ED322241AC7AA004C4EA8 /* NotificationCenter.framework in Frameworks */,
-				115186B6241FB03F00EBC83E /* Disk in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -340,6 +368,7 @@
 				1162D125240D05F600647002 /* Frameworks */,
 				1162D126240D05F600647002 /* Resources */,
 				344ED32D241AC7AA004C4EA8 /* Embed App Extensions */,
+				BF878055242E818300A56CE2 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -350,8 +379,8 @@
 			packageProductDependencies = (
 				11BF32A924156AE500270130 /* FloatingPanel */,
 				1195F1A4241EC1FB00FE718F /* Charts */,
-				115186B0241FAFF300EBC83E /* Disk */,
-				115186B3241FB00000EBC83E /* CSV */,
+				BF878048242E805500A56CE2 /* CSV */,
+				BF87804D242E807E00A56CE2 /* Disk */,
 			);
 			productName = Corona;
 			productReference = 1162D128240D05F600647002 /* Corona Tracker.app */;
@@ -364,6 +393,7 @@
 				344ED31B241AC7AA004C4EA8 /* Sources */,
 				344ED31C241AC7AA004C4EA8 /* Frameworks */,
 				344ED31D241AC7AA004C4EA8 /* Resources */,
+				BF878052242E816C00A56CE2 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -371,8 +401,8 @@
 			);
 			name = Widget;
 			packageProductDependencies = (
-				115186B5241FB03F00EBC83E /* Disk */,
-				115186B7241FB04200EBC83E /* CSV */,
+				BF87804F242E809100A56CE2 /* Disk */,
+				BF878057242E819100A56CE2 /* CSV */,
 			);
 			productName = CoronaTrackerWidget;
 			productReference = 344ED31F241AC7AA004C4EA8 /* Widget.appex */;
@@ -408,8 +438,8 @@
 			packageReferences = (
 				1162D14B240EE5B800647002 /* XCRemoteSwiftPackageReference "Charts" */,
 				11BF32A824156AE500270130 /* XCRemoteSwiftPackageReference "FloatingPanel" */,
-				115186AF241FAFF300EBC83E /* XCRemoteSwiftPackageReference "Disk" */,
-				115186B2241FB00000EBC83E /* XCRemoteSwiftPackageReference "CSV" */,
+				BF878047242E805500A56CE2 /* XCRemoteSwiftPackageReference "CSV" */,
+				BF87804C242E807E00A56CE2 /* XCRemoteSwiftPackageReference "Disk" */,
 			);
 			productRefGroup = 1162D129240D05F600647002 /* Products */;
 			projectDirPath = "";
@@ -777,22 +807,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		115186AF241FAFF300EBC83E /* XCRemoteSwiftPackageReference "Disk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/saoudrizwan/Disk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.6.4;
-			};
-		};
-		115186B2241FB00000EBC83E /* XCRemoteSwiftPackageReference "CSV" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/yaslab/CSV.swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.4.3;
-			};
-		};
 		1162D14B240EE5B800647002 /* XCRemoteSwiftPackageReference "Charts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/danielgindi/Charts";
@@ -809,29 +823,25 @@
 				kind = branch;
 			};
 		};
+		BF878047242E805500A56CE2 /* XCRemoteSwiftPackageReference "CSV" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mhdhejazi/CSV.swift";
+			requirement = {
+				branch = dynamic;
+				kind = branch;
+			};
+		};
+		BF87804C242E807E00A56CE2 /* XCRemoteSwiftPackageReference "Disk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mhdhejazi/Disk";
+			requirement = {
+				branch = dynamic;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		115186B0241FAFF300EBC83E /* Disk */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 115186AF241FAFF300EBC83E /* XCRemoteSwiftPackageReference "Disk" */;
-			productName = Disk;
-		};
-		115186B3241FB00000EBC83E /* CSV */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 115186B2241FB00000EBC83E /* XCRemoteSwiftPackageReference "CSV" */;
-			productName = CSV;
-		};
-		115186B5241FB03F00EBC83E /* Disk */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 115186AF241FAFF300EBC83E /* XCRemoteSwiftPackageReference "Disk" */;
-			productName = Disk;
-		};
-		115186B7241FB04200EBC83E /* CSV */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 115186B2241FB00000EBC83E /* XCRemoteSwiftPackageReference "CSV" */;
-			productName = CSV;
-		};
 		1195F1A4241EC1FB00FE718F /* Charts */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 1162D14B240EE5B800647002 /* XCRemoteSwiftPackageReference "Charts" */;
@@ -841,6 +851,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 11BF32A824156AE500270130 /* XCRemoteSwiftPackageReference "FloatingPanel" */;
 			productName = FloatingPanel;
+		};
+		BF878048242E805500A56CE2 /* CSV */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF878047242E805500A56CE2 /* XCRemoteSwiftPackageReference "CSV" */;
+			productName = CSV;
+		};
+		BF87804D242E807E00A56CE2 /* Disk */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF87804C242E807E00A56CE2 /* XCRemoteSwiftPackageReference "Disk" */;
+			productName = Disk;
+		};
+		BF87804F242E809100A56CE2 /* Disk */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF87804C242E807E00A56CE2 /* XCRemoteSwiftPackageReference "Disk" */;
+			productName = Disk;
+		};
+		BF878057242E819100A56CE2 /* CSV */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF878047242E805500A56CE2 /* XCRemoteSwiftPackageReference "CSV" */;
+			productName = CSV;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
