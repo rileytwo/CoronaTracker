@@ -1,5 +1,5 @@
 //
-//  CurrentStateChart.swift
+//  TopChartView.swift
 //  Corona Tracker
 //
 //  Created by Mohammad on 3/7/20.
@@ -10,11 +10,11 @@ import UIKit
 
 import Charts
 
-class TopCountriesChartView: BarChartView {
+class TopChartView: BarChartView {
 	var isLogarithmic = false {
 		didSet {
 			self.clear()
-			self.update()
+			self.update(animated: true)
 		}
 	}
 
@@ -29,8 +29,12 @@ class TopCountriesChartView: BarChartView {
 			guard let entry = self.barData?.dataSets.first?.entryForIndex(Int(value)) as? BarChartDataEntry,
 				let region = entry.data as? Region else { return value.description }
 
-			return region.name.replacingOccurrences(of: " ", with: "\n")
+			return region.localizedName.replacingOccurrences(of: " ", with: "\n")
 		})
+		/// Rotate labels in other languages
+		if !Locale.current.isEnglish {
+			xAxis.labelRotationAngle = 45
+		}
 
 //		leftAxis.drawGridLinesEnabled = false
 		leftAxis.gridColor = .lightGray
@@ -52,8 +56,14 @@ class TopCountriesChartView: BarChartView {
 		noDataFont = .systemFont(ofSize: 15)
 
 		let simpleMarker = SimpleMarkerView(chartView: self) { (entry, highlight) in
-			guard let region = entry.data as? Region else { return entry.y.kmFormatted }
-			return region.report?.stat.description ?? entry.y.kmFormatted
+			guard let region = entry.data as? Region,
+				let report = region.report else { return entry.y.kmFormatted }
+
+			return """
+			\(L10n.Case.confirmed): \(report.stat.confirmedCountString)
+			\(L10n.Case.recovered): \(report.stat.recoveredCountString) (\(report.stat.recoveredPercent.percentFormatted))
+			\(L10n.Case.deaths): \(report.stat.deathCountString) (\(report.stat.deathPercent.percentFormatted))
+			"""
 		}
 		simpleMarker.timeout = 5
 		marker = simpleMarker
@@ -72,7 +82,7 @@ class TopCountriesChartView: BarChartView {
 		legend.stackSpace = 0
 	}
 
-	func update() {
+	func update(animated: Bool) {
 		let regions = DataManager.instance.topCountries
 
 		var entries = [BarChartDataEntry]()
@@ -87,7 +97,7 @@ class TopCountriesChartView: BarChartView {
 			entries.append(entry)
 		}
 
-		let label = isLogarithmic ? "Most Affected (Logarithmic)" : "Most Affected Countries"
+		let label = isLogarithmic ? L10n.Chart.logarithmic : L10n.Chart.topCountries
 		let dataSet = BarChartDataSet(entries: entries, label: label)
 		dataSet.colors = ChartColorTemplates.pastel()
 
@@ -111,6 +121,8 @@ class TopCountriesChartView: BarChartView {
 
 		data = BarChartData(dataSet: dataSet)
 
-		animate(yAxisDuration: 2)
+		if animated {
+			animate(yAxisDuration: 2, easingOption: .easeOutCubic)
+		}
 	}
 }

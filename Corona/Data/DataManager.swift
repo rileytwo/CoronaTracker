@@ -38,6 +38,12 @@ public class DataManager {
 		}
 	}
 
+	public func allRegions() -> [Region] {
+		var result = regions(of: .country)
+		result.append(contentsOf: regions(of: .province).filter { !result.contains($0) })
+		return result
+	}
+
 	public func load(completion: @escaping (Bool) -> ()) {
 		DispatchQueue.global().async {
 
@@ -67,40 +73,45 @@ extension DataManager {
 				return
 			}
 
+			/// Don't download the time serieses if they are not old enough. Currently, they are updated from the data source every 24 hours.
+//			if self.world.timeSeries?.lastUpdate?.ageDays ?? 0 < 2 {
+//				self.update(regions: regions, timeSeriesRegions: self.regions(of: .province), completion: completion)
+//				return
+//			}
+
 			JHURepoDataService.instance.fetchTimeSerieses { (timeSeriesRegions, error) in
-				if let timeSeriesRegions = timeSeriesRegions {
-					for timeSeriesRegion in timeSeriesRegions {
-						regions.first { $0 == timeSeriesRegion }?.timeSeries = timeSeriesRegion.timeSeries
-					}
-				}
-
-				/// Countries
-				var countries = [Region]()
-				countries.append(contentsOf: regions.filter({ !$0.isProvince }))
-				Dictionary(grouping: regions.filter({ region in
-					region.isProvince
-				}), by: { region in
-					region.parentName
-				}).forEach { (key, value) in
-					let countryRegion = Region(level: .country,
-											   name: key ?? "N/A",
-											   parentName: nil,
-											   location: .center(of: value.map({ $0.location })))
-
-					countryRegion.subRegions = value
-					countries.append(countryRegion)
-				}
-
-				/// World
-				let worldRegion = Region.world
-				worldRegion.subRegions = countries
-
-				self.world = worldRegion
-
-				try? Disk.save(self.world, to: .caches, as: Self.dataFileName)
-
-				completion(true)
+				self.update(regions: regions, timeSeriesRegions: timeSeriesRegions, completion: completion)
 			}
 		}
+	}
+
+	private func update(regions: [Region], timeSeriesRegions: [Region]?, completion: @escaping (Bool) -> ()) {
+		timeSeriesRegions?.forEach { timeSeriesRegion in
+			regions.first { $0 == timeSeriesRegion }?.timeSeries = timeSeriesRegion.timeSeries
+		}
+
+		/// Countries
+		var countries = [Region]()
+		countries.append(contentsOf: regions.filter({ !$0.isProvince }))
+		Dictionary(grouping: regions.filter(\.isProvince), by: \.parentName).forEach { (key, value) in
+			if let countryRegion = Region.join(subRegions: value) {
+				countries.append(countryRegion)
+			}
+		}
+
+		/// Update US time series
+		if let timeSeriesRegion = timeSeriesRegions?.first(where: { $0.name == "US" }) {
+			countries.first { $0.name == "US" }?.timeSeries = timeSeriesRegion.timeSeries
+		}
+
+		/// World
+		let worldRegion = Region.world
+		worldRegion.subRegions = countries
+
+		self.world = worldRegion
+
+		try? Disk.save(self.world, to: .caches, as: Self.dataFileName)
+
+		completion(true)
 	}
 }

@@ -16,6 +16,12 @@ public struct Report: Codable {
 extension Report {
 	static func join(subReports: [Report]) -> Report {
 		Report(lastUpdate: subReports.max { $0.lastUpdate < $1.lastUpdate }!.lastUpdate,
-			   stat: Statistic.sum(subData: subReports.map { $0.stat }))
+			   stat: Statistic.sum(subData: subReports.map(\.stat)))
+	}
+}
+
+extension Report: CustomStringConvertible {
+	public var description: String {
+		"Report: \(lastUpdate): \(stat)"
 	}
 }

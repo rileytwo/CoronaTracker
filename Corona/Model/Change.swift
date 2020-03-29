@@ -37,17 +37,25 @@ extension Change {
 	}
 
 	public var newConfirmedString: String { "+\(newConfirmed.groupingFormatted)" }
-	public var newRecoveredString: String { "+\(newRecovered.groupingFormatted)" }
+	public var newRecoveredString: String { currentRecovered == 0 ? "-" : "+\(newRecovered.groupingFormatted)" }
 	public var newDeathsString: String { "+\(newDeaths.groupingFormatted)" }
 
 	public var confirmedGrowthString: String { "↑\(confirmedGrowthPercent.kmFormatted)%" }
-	public var recoveredGrowthString: String { "↑\(recoveredGrowthPercent.kmFormatted)%" }
+	public var recoveredGrowthString: String { currentRecovered == 0 ? "-" : "↑\(recoveredGrowthPercent.kmFormatted)%" }
 	public var deathsGrowthString: String { "↑\(deathsGrowthPercent.kmFormatted)%" }
+
+	public var isZero: Bool { newConfirmed == 0 && newRecovered == 0 && newDeaths == 0 }
+}
+
+extension Change: CustomStringConvertible {
+	public var description: String {
+		"Change: \(newConfirmedString) | \(newRecoveredString) | \(newDeathsString)"
+	}
 }
 
 extension Change {
 	public static func sum(subChanges: [Change]) -> Change {
-		Change(currentStat: Statistic.sum(subData: subChanges.map { $0.currentStat }),
-			   lastStat: Statistic.sum(subData: subChanges.map { $0.lastStat }))
+		Change(currentStat: Statistic.sum(subData: subChanges.map(\.currentStat)),
+			   lastStat: Statistic.sum(subData: subChanges.map(\.lastStat)))
 	}
 }

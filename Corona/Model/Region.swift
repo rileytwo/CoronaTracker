@@ -20,8 +20,8 @@ public class Region: Codable {
 
 	public var subRegions: [Region] = [] {
 		didSet {
-			report = Report.join(subReports: subRegions.compactMap { $0.report })
-			timeSeries = TimeSeries.join(subSerieses: subRegions.compactMap { $0.timeSeries })
+			report = Report.join(subReports: subRegions.compactMap(\.report))
+			timeSeries = TimeSeries.join(subSerieses: subRegions.compactMap(\.timeSeries))
 		}
 	}
 
@@ -33,8 +33,8 @@ public class Region: Codable {
 	}
 
 	private func generateDailyChange() -> Change? {
-		if !subRegions.isEmpty {
-			return Change.sum(subChanges: subRegions.compactMap { $0.dailyChange })
+		if !isCountry, !subRegions.isEmpty {
+			return Change.sum(subChanges: subRegions.compactMap(\.dailyChange))
 		}
 
 		guard let todayReport = report,
@@ -43,7 +43,7 @@ public class Region: Codable {
 		var yesterdayStat: Statistic
 		var dates = timeSeries.series.keys.sorted()
 		guard let lastDate = dates.popLast(),
-			lastDate.ageDays < 2,
+			lastDate.ageDays <= 3,
 			let lastStat = timeSeries.series[lastDate] else { return nil }
 
 		yesterdayStat = lastStat
@@ -72,6 +72,20 @@ extension Region {
 	public var isProvince: Bool { level == .province }
 	public var longName: String { isProvince ? "\(name), \(parentName ?? "-")" : name }
 
+	public var localizedName: String {
+		if name == Region.world.name {
+			return L10n.Region.world
+		}
+
+		return Locale.translateCountryName(name) ?? name
+	}
+	public var localizedLongName: String {
+		guard isProvince else { return localizedName }
+
+		let localizedParentName = Locale.translateCountryName(parentName ?? "-") ?? "-"
+		return "\(name), \(localizedParentName)"
+	}
+
 	public func find(region: Region) -> Region? {
 		if region == self {
 			return self
@@ -87,10 +101,13 @@ extension Region {
 	public static func join(subRegions: [Region]) -> Region? {
 		guard let firstRegion = subRegions.first else { return nil }
 
-		return Region(level: firstRegion.level.parent,
-					  name: subRegions.first!.parentName ?? "N/A",
-					  parentName: nil,
-					  location: Coordinate.center(of: subRegions.map { $0.location }))
+		let region = Region(level: firstRegion.level.parent,
+							name: firstRegion.parentName ?? "N/A",
+							parentName: nil,
+							location: (subRegions.max() ?? firstRegion).location)
+
+		region.subRegions = subRegions
+		return region
 	}
 }
 
@@ -104,5 +121,11 @@ extension Region: Equatable {
 extension Region: Comparable {
 	public static func < (lhs: Region, rhs: Region) -> Bool {
 		lhs.report?.stat.confirmedCount ?? 0 < rhs.report?.stat.confirmedCount ?? 0
+	}
+}
+
+extension Region: CustomStringConvertible {
+	public var description: String {
+		"Region: \(name) @\(parentName ?? "-") #\(report?.description ?? "-") ##\(timeSeries?.description ?? "-")"
 	}
 }

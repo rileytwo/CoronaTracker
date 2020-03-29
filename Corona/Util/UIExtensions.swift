@@ -9,11 +9,11 @@
 import MapKit
 
 extension MKMapView {
+	public static let maxZoom: CGFloat = 20
 	public var zoomLevel: CGFloat {
-		let maxZoom: CGFloat = 20
 		let zoomScale = self.visibleMapRect.size.width / Double(self.frame.size.width)
 		let zoomExponent = log2(zoomScale)
-		return maxZoom - CGFloat(zoomExponent)
+		return Self.maxZoom - CGFloat(zoomExponent)
 	}
 }
 
@@ -115,7 +115,7 @@ extension UIViewController {
 	func showMessage(title: String?, message: String?) {
 		hideHUD(animated: false) {
 			let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
-			alertController.addAction(.init(title: "OK", style: .default))
+			alertController.addAction(.init(title: L10n.Message.ok, style: .default))
 			self.present(alertController, animated: true)
 		}
 	}
