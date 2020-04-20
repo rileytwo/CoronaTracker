@@ -1,12 +1,22 @@
 //
-//  Extensions.swift
-//  Corona
-//
-//  Created by Mohammad on 3/3/20.
+//  Corona Tracker
+//  Created by Mhd Hejazi on 3/3/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
 import Foundation
+import CommonCrypto
+import MapKit
+
+extension CLLocationCoordinate2D {
+	public var location: CLLocation {
+		CLLocation(latitude: latitude, longitude: longitude)
+	}
+
+	public func distance(from coordinate: CLLocationCoordinate2D) -> CLLocationDistance {
+		location.distance(from: coordinate.location)
+	}
+}
 
 extension Locale {
 	public static let posix = Locale(identifier: "en_US_POSIX")
@@ -41,7 +51,7 @@ extension Calendar {
 }
 
 extension Date {
-	public static let reference = Calendar.posix.date(from: DateComponents(year: 2000))!
+	public static let reference = Calendar.posix.date(from: DateComponents(year: 2_000))!
 
 	public static func fromReferenceDays(days: Int) -> Date {
 		Calendar.posix.date(byAdding: .day, value: days, to: Date.reference)!
@@ -70,27 +80,22 @@ extension Date {
 
 		var interval: Int
 		var unit: String
-		if let value = components.year, value > 0  {
+		if let value = components.year, value > 0 {
 			interval = value
 			unit = "year"
-		}
-		else if let value = components.month, value > 0  {
+		} else if let value = components.month, value > 0 {
 			interval = value
 			unit = "month"
-		}
-		else if let value = components.day, value > 0  {
+		} else if let value = components.day, value > 0 {
 			interval = value
 			unit = "day"
-		}
-		else if let value = components.hour, value > 0  {
+		} else if let value = components.hour, value > 0 {
 			interval = value
 			unit = "hour"
-		}
-		else if let value = components.minute, value > 0  {
+		} else if let value = components.minute, value > 0 {
 			interval = value
 			unit = "minute"
-		}
-		else {
+		} else {
 			return "moments ago"
 		}
 
@@ -113,11 +118,11 @@ extension TimeZone {
 extension Double {
 	public var kmFormatted: String {
 		if self >= 1_000, self < 1_000_000 {
-			return String(format: "%.1fk", locale: .posix, self / 1_000).replacingOccurrences(of: ".0", with: "")
+			return NumberFormatter.groupingFormatter.string(from: NSNumber(value: self / 1_000))! + "k"
 		}
 
 		if self >= 1_000_000 {
-			return String(format: "%.1fm", locale: .posix, self / 1_000_000).replacingOccurrences(of: ".0", with: "")
+			return NumberFormatter.groupingFormatter.string(from: NSNumber(value: self / 1_000_000))! + "m"
 		}
 
 		return NumberFormatter.groupingFormatter.string(from: NSNumber(value: self))!
@@ -126,24 +131,20 @@ extension Double {
 	public var percentFormatted: String {
 		NumberFormatter.percentFormatter.string(from: NSNumber(value: self))!
 	}
+
+	public var radians: Double { self * Double.pi / 180 }
 }
 
 extension Int {
 	public var kmFormatted: String {
-		if self >= 1_000, self < 1_000_000 {
-			return String(format: "%dk", locale: .posix, self / 1_000)
-		}
-
-		if self >= 1_000_000 {
-			return String(format: "%dm", locale: .posix, self / 1_000_000)
-		}
-
-		return NumberFormatter.posixFormatter.string(from: NSNumber(value: self))!
+		Double(self).kmFormatted
 	}
 
 	public var groupingFormatted: String {
 		NumberFormatter.groupingFormatter.string(from: NSNumber(value: self))!
 	}
+
+	public var radians: Double { Double(self).radians }
 
 	public static func random() -> Int { random(in: 1..<max) }
 }
@@ -164,19 +165,44 @@ extension NumberFormatter {
 		formatter.multiplier = 1
 		return formatter
 	}()
-
-	public static let posixFormatter: NumberFormatter = {
-		let formatter = NumberFormatter()
-		formatter.locale = .posix
-		return formatter
-	}()
 }
 
 extension FileManager {
 	static let cachesDirectoryURL: URL? = {
-		return try? FileManager.default.url(for: .cachesDirectory,
-											in: .userDomainMask,
-											appropriateFor: nil,
-											create: true)
+		try? FileManager.default.url(for: .cachesDirectory,
+									 in: .userDomainMask,
+									 appropriateFor: nil,
+									 create: true)
 	}()
+}
+
+extension String {
+	func sha1Hash() -> String? {
+		guard let data = self.data(using: .utf8) else { return nil }
+		return data.sha1Hash()
+	}
+}
+
+extension Data {
+	func sha1Hash() -> String {
+		var digest = [UInt8](repeating: 0, count: Int(CC_SHA1_DIGEST_LENGTH))
+		_ = withUnsafeBytes { CC_SHA1($0.baseAddress, CC_LONG(self.count), &digest) }
+		return digest.map { String(format: "%02x", $0) }.joined()
+	}
+}
+
+extension Bundle {
+	var name: String? { infoDictionary?["CFBundleName"] as? String }
+
+	var version: String? { infoDictionary?["CFBundleVersion"] as? String }
+}
+
+extension Collection {
+	func sum(_ transform: (Self.Element) throws -> Int) rethrows -> Int {
+		try reduce(0) { $0 + (try transform($1)) }
+	}
+
+	func sum(_ transform: (Self.Element) throws -> CGFloat) rethrows -> CGFloat {
+		try reduce(0) { $0 + (try transform($1)) }
+	}
 }

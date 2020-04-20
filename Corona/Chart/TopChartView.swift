@@ -1,8 +1,6 @@
 //
-//  TopChartView.swift
 //  Corona Tracker
-//
-//  Created by Mohammad on 3/7/20.
+//  Created by Mhd Hejazi on 3/7/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -11,28 +9,26 @@ import UIKit
 import Charts
 
 class TopChartView: BaseBarChartView {
-	public static let defaultColors = [
-		UIColor(hue: 0.57, saturation: 0.75, brightness: 0.8, alpha: 1.0).dynamic,
-		UIColor(hue: 0.8, saturation: 0.8, brightness: 0.7, alpha: 1.0).dynamic,
-		UIColor(hue: 0.2, saturation: 0.8, brightness: 0.7, alpha: 1.0).dynamic,
-		UIColor(hue: 0.1, saturation: 0.8, brightness: 0.7, alpha: 1.0).dynamic,
-		UIColor(hue: 0.95, saturation: 0.8, brightness: 0.7, alpha: 1.0).dynamic,
-		UIColor(hue: 0.4, saturation: 0.8, brightness: 0.7, alpha: 1.0).dynamic,
-	]
-
 	private var colors: [UIColor] {
 		switch mode {
-		case .confirmed: return Self.defaultColors
+		case .confirmed: return defaultColors
 		case .active: return [.systemYellow]
 		case .recovered: return [.systemGreen]
 		case .deaths: return [.systemRed]
 		}
 	}
 
+	override var shareableText: String? { L10n.Chart.topCountries }
+
 	override var supportedModes: [Statistic.Kind] {
 		[.confirmed, .recovered, .deaths]
 	}
 
+	override var extraMenuItems: [MenuItem] {
+		[MenuItem.option(title: L10n.Chart.logarithmic, selected: isLogarithmic, action: {
+			self.isLogarithmic.toggle()
+		})]
+	}
 
 	var isLogarithmic = false {
 		didSet {
@@ -45,23 +41,20 @@ class TopChartView: BaseBarChartView {
 		super.initializeView()
 
 		chartView.xAxis.drawGridLinesEnabled = false
-		chartView.xAxis.valueFormatter = DefaultAxisValueFormatter(block: { value, axis in
+		chartView.xAxis.valueFormatter = DefaultAxisValueFormatter(block: { value, _ in
 			guard let entry = self.chartView.barData?.dataSets.first?.entryForIndex(Int(value)) as? BarChartDataEntry,
 				let region = entry.data as? Region else { return value.description }
 
 			return region.localizedName.replacingOccurrences(of: " ", with: "\n")
 		})
 
-		/// Rotate labels in other languages
-		if !Locale.current.isEnglish {
-			chartView.xAxis.labelRotationAngle = 45
+		chartView.xAxis.labelRotationAngle = 35
+
+		chartView.leftAxis.valueFormatter = DefaultAxisValueFormatter { value, _ in
+			self.isLogarithmic ? pow(10, value).kmFormatted : value.kmFormatted
 		}
 
-		chartView.leftAxis.valueFormatter = DefaultAxisValueFormatter() { value, axis in
-			self.isLogarithmic ? Int(pow(10, value)).kmFormatted : Int(value).kmFormatted
-		}
-
-		let simpleMarker = SimpleMarkerView(chartView: chartView) { (entry, highlight) in
+		let simpleMarker = SimpleMarkerView(chartView: chartView) { entry, _ in
 			guard let region = entry.data as? Region,
 				let report = region.report else { return entry.y.kmFormatted }
 
@@ -72,49 +65,69 @@ class TopChartView: BaseBarChartView {
 			"""
 		}
 		simpleMarker.timeout = 5
+		simpleMarker.font = .systemFont(ofSize: 13 * fontScale)
 		chartView.marker = simpleMarker
 
 		chartView.legend.enabled = false
 	}
 
+	override func updateOptions(from chartView: RegionChartView) {
+		super.updateOptions(from: chartView)
+
+		guard let chartView = chartView as? TopChartView else { return }
+		self.isLogarithmic = chartView.isLogarithmic
+	}
+
 	override func update(region: Region?, animated: Bool) {
 		super.update(region: region, animated: animated)
 
-		let regions = DataManager.instance.topCountries
+		var regions: [Region] = []
+		var title: String = ""
+		var colors: [UIColor] = []
 
-		title = L10n.Chart.topCountries + (mode == .confirmed ? "" : " (\(mode))")
+		if region?.isWorld != true, let subRegions = region?.subRegions {
+			regions = [Region](subRegions.lazy.sorted().reversed().prefix(6))
+			title = L10n.Chart.topRegions
+			colors = self.colors.reversed()
+		}
+
+		if regions.count < 2 {
+			regions = DataManager.shared.topCountries
+			title = L10n.Chart.topCountries
+			colors = self.colors
+		}
+
+		self.title = title + (mode == .confirmed ? "" : " (\(mode))")
 
 		var entries = [BarChartDataEntry]()
-		for i in regions.indices {
-			let region = regions[i]
+		for index in regions.indices {
+			let region = regions[index]
 			var value = Double(region.report?.stat.number(for: mode) ?? 0)
 			if isLogarithmic {
 				value = log10(value)
 			}
-			let entry = BarChartDataEntry(x: Double(i), y: value)
+			let entry = BarChartDataEntry(x: Double(index), y: value)
 			entry.data = region
 			entries.append(entry)
 		}
 
-		let label = isLogarithmic ? L10n.Chart.logarithmic : L10n.Chart.topCountries
-		let dataSet = BarChartDataSet(entries: entries, label: label)
+		let dataSet = BarChartDataSet(entries: entries)
 		dataSet.colors = colors
 
 //		dataSet.drawValuesEnabled = false
 		dataSet.valueTextColor = SystemColor.secondaryLabel
-		dataSet.valueFont = .systemFont(ofSize: 12, weight: .regular)
-		dataSet.valueFormatter = DefaultValueFormatter(block: { value, entry, dataSetIndex, viewPortHandler in
-			guard let region = entry.data as? Region else { return Int(value).kmFormatted }
-			return region.report?.stat.number(for: self.mode).kmFormatted ?? Int(value).kmFormatted
+		dataSet.valueFont = .systemFont(ofSize: 12 * fontScale, weight: .regular)
+		dataSet.valueFormatter = DefaultValueFormatter(block: { value, entry, _, _ in
+			guard let region = entry.data as? Region else { return value.kmFormatted }
+			return region.report?.stat.number(for: self.mode).kmFormatted ?? value.kmFormatted
 		})
 
 		if isLogarithmic {
 			chartView.leftAxis.axisMinimum = 2
 			chartView.leftAxis.axisMaximum = 6
 			chartView.leftAxis.labelCount = 4
-		}
-		else {
-			chartView.leftAxis.resetCustomAxisMin()
+		} else {
+			chartView.leftAxis.axisMinimum = 0
 			chartView.leftAxis.resetCustomAxisMax()
 		}
 

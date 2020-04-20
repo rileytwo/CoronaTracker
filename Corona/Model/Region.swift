@@ -1,8 +1,6 @@
 //
-//  Region.swift
-//  Corona
-//
-//  Created by Mohammad on 3/4/20.
+//  Corona Tracker
+//  Created by Mhd Hejazi on 3/4/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -13,23 +11,26 @@ public class Region: Codable {
 	public let name: String
 	public let parentName: String? /// Country name
 	public let location: Coordinate
+	public let isoCode: String?
 
+	public var order: Int = Int.max
 	public var report: Report?
 	public var timeSeries: TimeSeries?
 	public lazy var dailyChange: Change? = { generateDailyChange() }()
 
-	public var subRegions: [Region] = [] {
-		didSet {
-			report = Report.join(subReports: subRegions.compactMap { $0.report })
-			timeSeries = TimeSeries.join(subSerieses: subRegions.compactMap { $0.timeSeries })
-		}
-	}
+	public var subRegions: [Region] = []
 
 	init(level: Level, name: String, parentName: String?, location: Coordinate) {
 		self.level = level
 		self.name = name
 		self.parentName = parentName
 		self.location = location
+
+		if level == .country {
+			self.isoCode = Locale.isoCode(from: name)
+		} else {
+			self.isoCode = nil
+		}
 	}
 
 	private func generateDailyChange() -> Change? {
@@ -46,9 +47,19 @@ public class Region: Codable {
 			lastDate.ageDays <= 3,
 			let lastStat = timeSeries.series[lastDate] else { return nil }
 
+		let nextToLastDate = dates.popLast()
+		var nextToLastStat: Statistic?
+		if let date = nextToLastDate {
+			nextToLastStat = timeSeries.series[date]
+		}
+
+		let confirmedDeltaToday = todayReport.stat.confirmedCount - lastStat.confirmedCount
+		let confirmedDeltaYesterday = lastStat.confirmedCount - (nextToLastStat?.confirmedCount ?? lastStat.confirmedCount)
+
 		yesterdayStat = lastStat
 
-		if todayReport.stat.confirmedCount == lastStat.confirmedCount {
+		/// If the delta today is less than 5% of yesterday's, then today's data is most likely incomplete
+		if Double(confirmedDeltaToday) < Double(confirmedDeltaYesterday) * 0.05 {
 			guard let nextToLastDate = dates.popLast(),
 				let nextToLastStat = timeSeries.series[nextToLastDate] else { return nil }
 
@@ -68,6 +79,7 @@ public class Region: Codable {
 }
 
 extension Region {
+	public var isWorld: Bool { level == .world }
 	public var isCountry: Bool { level == .country }
 	public var isProvince: Bool { level == .province }
 	public var longName: String { isProvince ? "\(name), \(parentName ?? "-")" : name }
@@ -86,12 +98,45 @@ extension Region {
 		return "\(name), \(localizedParentName)"
 	}
 
-	public func find(region: Region) -> Region? {
-		if region == self {
+	public func updateFromSubRegions() {
+		report = Report.join(subReports: subRegions.compactMap { $0.report })
+		timeSeries = TimeSeries.join(subSerieses: subRegions.compactMap { $0.timeSeries })
+	}
+
+	public func find(subRegion: Region) -> Region? {
+		if subRegion == self {
 			return self
 		}
 
-		return subRegions.first { $0 == region }
+		return subRegions.first { $0 == subRegion }
+	}
+
+	public func find(subRegionCode: String) -> Region? {
+		if subRegionCode == self.isoCode {
+			return self
+		}
+
+		return subRegions.first { $0.isoCode == subRegionCode }
+	}
+
+	public func find(subRegionName: String) -> Region? {
+		return subRegions.first { $0.name == subRegionName }
+	}
+
+	public func add(subRegions: [Region], addSubData: Bool) {
+		let newSubRegions = subRegions.filter { self.find(subRegionName: $0.name) == nil }
+		self.subRegions.append(contentsOf: newSubRegions)
+
+		guard addSubData else { return }
+
+		if let currentReport = report {
+			self.report = Report.join(
+				subReports: [currentReport] + subRegions.compactMap { $0.report })
+		}
+		if let currentTimeSeries = timeSeries {
+			self.timeSeries = TimeSeries.join(
+				subSerieses: [currentTimeSeries] + subRegions.compactMap { $0.timeSeries })
+		}
 	}
 }
 
@@ -101,12 +146,16 @@ extension Region {
 	public static func join(subRegions: [Region]) -> Region? {
 		guard let firstRegion = subRegions.first else { return nil }
 
+		/// Set the location to the center point between the two most affected sub regions
+		let location = Coordinate.center(of: subRegions.sorted().suffix(2).map { $0.location })
+
 		let region = Region(level: firstRegion.level.parent,
 							name: firstRegion.parentName ?? "N/A",
 							parentName: nil,
-							location: (subRegions.max() ?? firstRegion).location)
+							location: location)
 
 		region.subRegions = subRegions
+		region.updateFromSubRegions()
 		return region
 	}
 }
@@ -114,7 +163,7 @@ extension Region {
 extension Region: Equatable {
 	public static func == (lhs: Region, rhs: Region) -> Bool {
 		(lhs.level == rhs.level && lhs.parentName == rhs.parentName && lhs.name == rhs.name) ||
-			(lhs.location == rhs.location && !lhs.location.isZero)
+			(lhs.level == rhs.level && lhs.location == rhs.location && !lhs.location.isZero)
 	}
 }
 

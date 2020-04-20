@@ -1,8 +1,6 @@
 //
-//  Statistic.swift
-//  Corona
-//
-//  Created by Mohammad on 3/4/20.
+//  Corona Tracker
+//  Created by Mhd Hejazi on 3/4/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -17,9 +15,21 @@ public struct Statistic: Codable {
 extension Statistic {
 	public var activeCount: Int { confirmedCount - recoveredCount - deathCount }
 
-	public var recoveredPercent: Double { confirmedCount == 0 ? 0 : 100.0 * Double(recoveredCount) / Double(confirmedCount) }
-	public var deathPercent: Double { confirmedCount == 0 ? 0 :  100.0 * Double(deathCount) / Double(confirmedCount) }
-	public var activePercent: Double { confirmedCount == 0 ? 0 :  100.0 * Double(activeCount) / Double(confirmedCount) }
+	public var recoveredPercent: Double {
+		confirmedCount == 0
+			? 0
+			: 100.0 * Double(recoveredCount) / Double(confirmedCount)
+	}
+	public var deathPercent: Double {
+		confirmedCount == 0
+			? 0
+			: 100.0 * Double(deathCount) / Double(confirmedCount)
+	}
+	public var activePercent: Double {
+		confirmedCount == 0
+			? 0
+			: 100.0 * Double(activeCount) / Double(confirmedCount)
+	}
 
 	public var confirmedCountString: String { confirmedCount.groupingFormatted }
 	public var recoveredCountString: String { recoveredCount == 0 ? "-" : recoveredCount.groupingFormatted }
@@ -34,10 +44,8 @@ extension Statistic {
 }
 
 extension Statistic {
-	public enum Kind: CustomStringConvertible {
+	public enum Kind: Int, RawRepresentable, CaseIterable, CustomStringConvertible {
 		case confirmed, active, recovered, deaths
-
-		public static let all: [Kind] = [.confirmed, .active, .recovered, .deaths]
 
 		public var description: String {
 			switch self {
@@ -69,8 +77,8 @@ extension Statistic {
 	public static let zero = Statistic(confirmedCount: 0, recoveredCount: 0, deathCount: 0)
 
 	public static func sum(subData: [Statistic]) -> Statistic {
-		Statistic(confirmedCount: subData.reduce(0) { $0 + $1.confirmedCount },
-				  recoveredCount: subData.reduce(0) { $0 + $1.recoveredCount },
-				  deathCount: subData.reduce(0) { $0 + $1.deathCount })
+		Statistic(confirmedCount: subData.sum { $0.confirmedCount },
+				  recoveredCount: subData.sum { $0.recoveredCount },
+				  deathCount: subData.sum { $0.deathCount })
 	}
 }

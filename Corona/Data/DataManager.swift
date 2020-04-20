@@ -1,8 +1,6 @@
 //
-//  DataManager.swift
-//  Corona
-//
-//  Created by Mohammad on 3/4/20.
+//  Corona Tracker
+//  Created by Mhd Hejazi on 3/4/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -13,12 +11,12 @@ import Disk
 public class DataManager {
 	private static let dataFileName = "data.json"
 
-	public static let instance = DataManager()
+	public static let shared = DataManager()
 
 	public var world: Region = .world
 
 	public var topCountries: [Region] {
-		[Region](regions(of: .country).sorted().reversed().prefix(6))
+		[Region](regions(of: .country).lazy.sorted().reversed().prefix(6))
 	}
 
 	public func regions(of level: Region.Level) -> [Region] {
@@ -28,7 +26,7 @@ public class DataManager {
 		case .province:
 			var regions = [Region]()
 			for country in world.subRegions {
-				if (country.subRegions.isEmpty) {
+				if country.subRegions.isEmpty {
 					regions.append(country)
 				} else {
 					regions.append(contentsOf: country.subRegions)
@@ -44,48 +42,98 @@ public class DataManager {
 		return result
 	}
 
-	public func load(completion: @escaping (Bool) -> ()) {
+	public func load(completion: @escaping (Bool) -> Void) {
 		DispatchQueue.global().async {
 
 			var result: Bool
 			do {
 				self.world = try Disk.retrieve(Self.dataFileName, from: .caches, as: Region.self)
 				result = true
-			}
-			catch {
-				print("Unexpected error: \(error).")
+			} catch {
+				debugPrint("Unexpected error:", error)
 				try? Disk.clear(.caches)
 				result = false
 			}
 
 			DispatchQueue.main.async {
-				completion(result);
+				completion(result)
 			}
 		}
 	}
 }
 
 extension DataManager {
-	public func download(completion: @escaping (Bool) -> ()) {
-		JHUWebDataService.instance.fetchReports { (regions, error) in
+	public func download(completion: @escaping (Bool) -> Void) {
+		let dispatchGroup = DispatchGroup()
+		var result: (jhu: [Region]?, bing: [Region]?, rki: [Region]?) = (nil, nil, nil)
+
+		/// Main data is from JHU
+		dispatchGroup.enter()
+		JHUWebDataService.shared.fetchReports { regions, _ in
 			guard let regions = regions else {
+				dispatchGroup.leave()
 				completion(false)
 				return
 			}
 
-			/// Don't download the time serieses if they are not old enough. Currently, they are updated from the data source every 24 hours.
-//			if self.world.timeSeries?.lastUpdate?.ageDays ?? 0 < 2 {
-//				self.update(regions: regions, timeSeriesRegions: self.regions(of: .province), completion: completion)
-//				return
-//			}
-
-			JHURepoDataService.instance.fetchTimeSerieses { (timeSeriesRegions, error) in
-				self.update(regions: regions, timeSeriesRegions: timeSeriesRegions, completion: completion)
+			JHURepoDataService.shared.fetchTimeSerieses { timeSeriesRegions, _ in
+				self.update(regions: regions, timeSeriesRegions: timeSeriesRegions)
+				result.jhu = regions
+				dispatchGroup.leave()
 			}
+		}
+
+		/// Add more data from Bing
+		dispatchGroup.enter()
+		BingDataService.shared.fetchReports { regions, _ in
+			guard let regions = regions else {
+				dispatchGroup.leave()
+				return
+			}
+
+			result.bing = regions
+			dispatchGroup.leave()
+		}
+
+		/// Add data for Germany
+		dispatchGroup.enter()
+		RKIDataService.shared.fetchReports { regions, _ in
+			guard let regions = regions else {
+				dispatchGroup.leave()
+				return
+			}
+
+			result.rki = regions
+			dispatchGroup.leave()
+		}
+
+		dispatchGroup.notify(queue: .global(qos: .default)) {
+			if result.jhu == nil {
+				return
+			}
+
+			/// Data from Bing
+			if let regions = result.bing {
+				for region in regions {
+					if let regionCode = Locale.isoCode(from: region.name),
+						let existingRegion = self.world.find(subRegionCode: regionCode) {
+						existingRegion.add(subRegions: region.subRegions, addSubData: false)
+					}
+				}
+			}
+
+			/// Data for Germany comes from a different source, so don't accumulate data
+			if let subRegions = result.rki, let region = self.world.find(subRegionCode: "DE") {
+				region.subRegions = subRegions
+			}
+
+			try? Disk.save(self.world, to: .caches, as: Self.dataFileName)
+
+			completion(true)
 		}
 	}
 
-	private func update(regions: [Region], timeSeriesRegions: [Region]?, completion: @escaping (Bool) -> ()) {
+	private func update(regions: [Region], timeSeriesRegions: [Region]?) {
 		timeSeriesRegions?.forEach { timeSeriesRegion in
 			regions.first { $0 == timeSeriesRegion }?.timeSeries = timeSeriesRegion.timeSeries
 		}
@@ -93,13 +141,17 @@ extension DataManager {
 		/// Countries
 		var countries = [Region]()
 		countries.append(contentsOf: regions.filter({ !$0.isProvince }))
-		Dictionary(grouping: regions.filter({ region in
-			region.isProvince
-		}), by: { region in
-			region.parentName
-		}).forEach { (key, value) in
-			if let countryRegion = Region.join(subRegions: value) {
-				countries.append(countryRegion)
+		let provinceRegions = regions.filter({ $0.isProvince })
+		Dictionary(grouping: provinceRegions, by: { $0.parentName }).values.forEach { subRegions in
+			/// If there is already a region for this country, just add the sub regions
+			if let existingCountry = countries.first(where: { $0.name == subRegions.first?.parentName }) {
+				existingCountry.add(subRegions: subRegions, addSubData: true)
+				return
+			}
+
+			/// Otherwise, create a new country region
+			if let newCountry = Region.join(subRegions: subRegions) {
+				countries.append(newCountry)
 			}
 		}
 
@@ -111,11 +163,13 @@ extension DataManager {
 		/// World
 		let worldRegion = Region.world
 		worldRegion.subRegions = countries
+		worldRegion.updateFromSubRegions()
 
 		self.world = worldRegion
 
-		try? Disk.save(self.world, to: .caches, as: Self.dataFileName)
-
-		completion(true)
+		let sortedCountries: [Region] = countries.lazy.sorted().reversed()
+		for index in sortedCountries.indices {
+			sortedCountries[index].order = index
+		}
 	}
 }

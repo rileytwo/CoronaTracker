@@ -1,8 +1,6 @@
 //
-//  Coordinate.swift
 //  Corona Tracker
-//
-//  Created by Mohammad on 3/11/20.
+//  Created by Mhd Hejazi on 3/11/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -24,9 +22,7 @@ extension Coordinate {
 		let center = Coordinate(latitude: totals.latitude / Double(coordinates.count),
 								longitude: totals.longitude / Double(coordinates.count))
 
-		return coordinates.min {
-			center.distance(from: $0) < center.distance(from: $1)
-		}!
+		return center
 	}
 
 	public var isZero: Bool { latitude == 0 && longitude == 0 }
@@ -40,8 +36,8 @@ extension Coordinate {
 
 extension Coordinate: Equatable {
 	public static func == (lhs: Coordinate, rhs: Coordinate) -> Bool {
-		Int(lhs.latitude * 1000) == Int(rhs.latitude * 1000) &&
-			Int(lhs.longitude * 1000) == Int(rhs.longitude * 1000)
+		Int(lhs.latitude * 1_000) == Int(rhs.latitude * 1_000) &&
+			Int(lhs.longitude * 1_000) == Int(rhs.longitude * 1_000)
 	}
 }
 

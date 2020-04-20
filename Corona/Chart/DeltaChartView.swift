@@ -1,8 +1,6 @@
 //
-//  DeltaChartView.swift
 //  Corona Tracker
-//
-//  Created by Mohammad on 3/23/20.
+//  Created by Mhd Hejazi on 3/23/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -11,6 +9,8 @@ import UIKit
 import Charts
 
 class DeltaChartView: BaseBarChartView {
+	override var shareableText: String? { L10n.Chart.delta }
+
 	override var supportedModes: [Statistic.Kind] {
 		[.confirmed, .deaths]
 	}
@@ -21,11 +21,13 @@ class DeltaChartView: BaseBarChartView {
 		chartView.xAxis.drawGridLinesEnabled = false
 		chartView.xAxis.valueFormatter = DayAxisValueFormatter(chartView: chartView)
 
-		chartView.leftAxis.valueFormatter = DefaultAxisValueFormatter() { value, axis in
-			Int(value).kmFormatted
+		chartView.leftAxis.valueFormatter = DefaultAxisValueFormatter { value, _ in
+			value.kmFormatted
 		}
 
-		chartView.marker = SimpleMarkerView(chartView: chartView)
+		let marker = SimpleMarkerView(chartView: chartView)
+		marker.font = .systemFont(ofSize: 13 * fontScale)
+		chartView.marker = marker
 	}
 
 	override func update(region: Region?, animated: Bool) {
@@ -45,7 +47,7 @@ class DeltaChartView: BaseBarChartView {
 			LegendEntry(label: "↑ " + L10n.Chart.Delta.increasing, form: .circle, formSize: 12,
 						formLineWidth: 0, formLineDashPhase: 0, formLineDashLengths: nil, formColor: increasingColor),
 			LegendEntry(label: "↓ " + L10n.Chart.Delta.decreasing, form: .circle, formSize: 12,
-						formLineWidth: 0, formLineDashPhase: 0, formLineDashLengths: nil, formColor: .systemBlue),
+						formLineWidth: 0, formLineDashPhase: 0, formLineDashLengths: nil, formColor: .systemBlue)
 		])
 
 		let changes = series.changes()
@@ -59,11 +61,11 @@ class DeltaChartView: BaseBarChartView {
 		}
 
 		var colors = [UIColor]()
-		for i in entries.indices.reversed() {
+		for index in entries.indices.reversed() {
 			var color = increasingColor
-			if i > 0 {
-				let currentEntry = entries[i]
-				let previousEntry = entries[i - 1]
+			if index > 0 {
+				let currentEntry = entries[index]
+				let previousEntry = entries[index - 1]
 				if currentEntry.y < previousEntry.y {
 					color = .systemBlue
 				}

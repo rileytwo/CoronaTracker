@@ -1,8 +1,6 @@
 //
-//  Change.swift
 //  Corona Tracker
-//
-//  Created by Mohammad on 3/16/20.
+//  Created by Mhd Hejazi on 3/16/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -36,13 +34,13 @@ extension Change {
 		lastDeaths == 0 ? 0 :(Double(currentDeaths) / Double(lastDeaths) - 1) * 100
 	}
 
-	public var newConfirmedString: String { "+\(newConfirmed.groupingFormatted)" }
+	public var newConfirmedString: String { newConfirmed > 0 ? "+\(newConfirmed.groupingFormatted)" : "-" }
 	public var newRecoveredString: String { currentRecovered == 0 ? "-" : "+\(newRecovered.groupingFormatted)" }
-	public var newDeathsString: String { "+\(newDeaths.groupingFormatted)" }
+	public var newDeathsString: String { newDeaths > 0 ? "+\(newDeaths.groupingFormatted)" : "-" }
 
-	public var confirmedGrowthString: String { "↑\(confirmedGrowthPercent.kmFormatted)%" }
+	public var confirmedGrowthString: String { newConfirmed > 0 ? "↑\(confirmedGrowthPercent.kmFormatted)%" : "-" }
 	public var recoveredGrowthString: String { currentRecovered == 0 ? "-" : "↑\(recoveredGrowthPercent.kmFormatted)%" }
-	public var deathsGrowthString: String { "↑\(deathsGrowthPercent.kmFormatted)%" }
+	public var deathsGrowthString: String { newDeaths > 0 ? "↑\(deathsGrowthPercent.kmFormatted)%" : "-" }
 
 	public var isZero: Bool { newConfirmed == 0 && newRecovered == 0 && newDeaths == 0 }
 }

@@ -1,8 +1,6 @@
 //
-//  Extensions.swift
-//  Corona
-//
-//  Created by Mohammad on 3/3/20.
+//  Corona Tracker
+//  Created by Mhd Hejazi on 3/3/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -17,34 +15,26 @@ extension MKMapView {
 	}
 }
 
-extension CLLocationCoordinate2D {
-	public var location: CLLocation {
-		return CLLocation(latitude: latitude, longitude: longitude)
-	}
-
-	public func distance(from coordinate: CLLocationCoordinate2D) -> CLLocationDistance {
-		return location.distance(from: coordinate.location)
-	}
-}
-
 extension UIControl {
-	public func addAction(for controlEvents: UIControl.Event = .touchUpInside, _ closure: @escaping () -> ()) {
+	public func addAction(for controlEvents: UIControl.Event = .touchUpInside, _ closure: @escaping () -> Void) {
 		let sleeve = ClosureSleeve(closure)
 		addTarget(sleeve, action: #selector(ClosureSleeve.invoke), for: controlEvents)
 		objc_setAssociatedObject(self, "[\(arc4random())]", sleeve, objc_AssociationPolicy.OBJC_ASSOCIATION_RETAIN)
 	}
-}
 
-/// WARNING: This solution causes memory leaks
-@objc class ClosureSleeve: NSObject {
-	let closure: () -> ()
+	/// WARNING: This solution causes memory leaks
+	@objc
+	class ClosureSleeve: NSObject {
+		let closure: () -> Void
 
-	init (_ closure: @escaping () -> ()) {
-		self.closure = closure
-	}
+		init (_ closure: @escaping () -> Void) {
+			self.closure = closure
+		}
 
-	@objc func invoke() {
-		closure()
+		@objc
+		func invoke() {
+			closure()
+		}
 	}
 }
 
@@ -61,23 +51,30 @@ extension UIView {
 		UIGraphicsImageRenderer(bounds: bounds).image { layer.render(in: $0.cgContext) }
 	}
 
-	public func snapEdgesToSuperview(_ edges: UIRectEdge = .all, constant: CGFloat = 0) {
-		snapEdges(edges, to: superview!, constant: constant)
+	public func snapEdgesToSuperview(_ edges: UIRectEdge = .all, constant: CGFloat = 0, safeArea: Bool = false) {
+		snapEdges(edges, to: superview!, constant: constant, safeArea: safeArea)
 	}
 
-	public func snapEdges(_ edges: UIRectEdge, to view: UIView, constant: CGFloat = 0) {
+	public func snapEdges(_ edges: UIRectEdge, to otherView: UIView, constant: CGFloat = 0, safeArea: Bool = false) {
 		translatesAutoresizingMaskIntoConstraints = false
+		var otherViewTopAnchor = otherView.topAnchor
+		var otherViewBottomAnchor = otherView.bottomAnchor
+		if #available(iOS 11, *), safeArea {
+			otherViewTopAnchor = otherView.safeAreaLayoutGuide.topAnchor
+			otherViewBottomAnchor = otherView.safeAreaLayoutGuide.bottomAnchor
+		}
+
 		if edges.contains(.top) {
-			topAnchor.constraint(equalTo: view.topAnchor, constant: constant).isActive = true
+			topAnchor.constraint(equalTo: otherViewTopAnchor, constant: constant).isActive = true
 		}
 		if edges.contains(.bottom) {
-			bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -constant).isActive = true
+			bottomAnchor.constraint(equalTo: otherViewBottomAnchor, constant: -constant).isActive = true
 		}
 		if edges.contains(.left) {
-			leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: constant).isActive = true
+			leadingAnchor.constraint(equalTo: otherView.leadingAnchor, constant: constant).isActive = true
 		}
 		if edges.contains(.right) {
-			trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -constant).isActive = true
+			trailingAnchor.constraint(equalTo: otherView.trailingAnchor, constant: -constant).isActive = true
 		}
 	}
 
@@ -139,7 +136,6 @@ extension UIImage {
 		guard let directoryURL = FileManager.cachesDirectoryURL else { return nil }
 
 		let imageURL = directoryURL.appendingPathComponent("\(fileName).\(imageType.rawValue)")
-		print(imageURL)
 
 		var data: Data?
 
@@ -191,6 +187,14 @@ extension UIImage {
 }
 
 extension UIColor {
+	static func dynamicColor(lightThemeColor: UIColor, darkThemeColor: UIColor) -> UIColor {
+		if #available(iOS 13.0, *) {
+			return UIColor(dynamicProvider: { ($0.userInterfaceStyle == .dark ? darkThemeColor : lightThemeColor) })
+		} else {
+			return lightThemeColor
+		}
+	}
+
 	var dynamic: UIColor {
 		if #available(iOS 13.0, *) {
 			var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0

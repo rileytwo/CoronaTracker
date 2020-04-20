@@ -41,6 +41,8 @@ internal enum L10n {
     internal static let logarithmic = L10n.tr("Localizable", "chart.logarithmic")
     /// Most Affected Countries
     internal static let topCountries = L10n.tr("Localizable", "chart.topCountries")
+    /// Most Affected Regions
+    internal static let topRegions = L10n.tr("Localizable", "chart.topRegions")
     /// Confirmed cases since 100th case
     internal static let trendline = L10n.tr("Localizable", "chart.trendline")
     internal enum Axis {
@@ -56,6 +58,10 @@ internal enum L10n {
       internal static let decreasing = L10n.tr("Localizable", "chart.delta.decreasing")
       /// Increasing
       internal static let increasing = L10n.tr("Localizable", "chart.delta.increasing")
+    }
+    internal enum Trendline {
+      /// Deaths since 10th death
+      internal static let deaths = L10n.tr("Localizable", "chart.trendline.deaths")
     }
   }
 
@@ -75,6 +81,10 @@ internal enum L10n {
   }
 
   internal enum Menu {
+    /// Copy
+    internal static let copy = L10n.tr("Localizable", "menu.copy")
+    /// Search
+    internal static let search = L10n.tr("Localizable", "menu.search")
     /// Share
     internal static let share = L10n.tr("Localizable", "menu.share")
     /// Update

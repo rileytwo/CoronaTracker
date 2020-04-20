@@ -1,8 +1,6 @@
 //
-//  CurrentChartView.swift
 //  Corona Tracker
-//
-//  Created by Mohammad on 3/7/20.
+//  Created by Mhd Hejazi on 3/7/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -11,6 +9,8 @@ import UIKit
 import Charts
 
 class CurrentChartView: ChartView<PieChartView> {
+	override var shareableText: String? { L10n.Share.current }
+
 	override func initializeView() {
 		super.initializeView()
 
@@ -25,7 +25,9 @@ class CurrentChartView: ChartView<PieChartView> {
 
 		chartView.rotationEnabled = false
 
-		chartView.marker = SimpleMarkerView(chartView: chartView)
+		let marker = SimpleMarkerView(chartView: chartView)
+		marker.font = .systemFont(ofSize: 13 * fontScale)
+		chartView.marker = marker
 	}
 
 	override func update(region: Region?, animated: Bool) {
@@ -48,12 +50,12 @@ class CurrentChartView: ChartView<PieChartView> {
 			UIColor(hue: 0.3, saturation: 0.2, brightness: 1.0, alpha: 1.0),
 			UIColor(hue: 0.03, saturation: 0.2, brightness: 1.0, alpha: 1.0)
 		]
-		dataSet.sliceSpace = 2
+		dataSet.sliceSpace = 2 * pow(fontScale, 2)
 		dataSet.xValuePosition = .outsideSlice
 		dataSet.yValuePosition = .insideSlice
 		dataSet.entryLabelColor = .black
-		dataSet.valueFont = .systemFont(ofSize: 14, weight: .bold)
-		dataSet.valueFormatter = PercentValueFormatter()
+		dataSet.valueFont = .systemFont(ofSize: 14 * fontScale, weight: .bold)
+		dataSet.valueFormatter = PercentValueFormatter(minPercent: fontScale == 1 ? 8 : 0)
 		dataSet.selectionShift = 8
 
 		chartView.data = PieChartData(dataSet: dataSet)

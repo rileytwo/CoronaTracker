@@ -1,8 +1,6 @@
 //
-//  App.swift
 //  Corona Tracker
-//
-//  Created by Mohammad on 3/13/20.
+//  Created by Mhd Hejazi on 3/13/20.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
 
@@ -12,17 +10,25 @@ import SafariServices
 import Disk
 
 class App {
+	static var topViewController: UIViewController {
+		var topController: UIViewController = MapController.shared
+		while let presentedController = topController.presentedViewController, !(presentedController is MenuController) {
+			topController = presentedController
+		}
+		return topController
+	}
+
 	#if targetEnvironment(macCatalyst)
 	static let updateURL = URL(string: "https://coronatracker.samabox.com/")!
 	#else
-	static let updateURL = URL(string: "https://github.com/MhdHejazi/CoronaTracker")!
+	static let updateURL = URL(string: "https://github.com/mhdhejazi/CoronaTracker")!
 	#endif
 
-	static let version = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+	static let version = Bundle.main.version
 
 	public static func checkForAppUpdate(completion: @escaping (_ updateAvailable: Bool) -> Void) {
-		let checkForUpdateURL = URL(string: "https://api.github.com/repos/MhdHejazi/CoronaTracker/releases/latest")!
-		_ = URLSession.shared.dataTask(with: checkForUpdateURL) { (data, response, error) in
+		let checkForUpdateURL = URL(string: "https://api.github.com/repos/mhdhejazi/CoronaTracker/releases/latest")!
+		_ = URLSession.shared.dataTask(with: checkForUpdateURL) { data, response, _ in
 			guard let response = response as? HTTPURLResponse,
 				response.statusCode == 200,
 				let data = data,

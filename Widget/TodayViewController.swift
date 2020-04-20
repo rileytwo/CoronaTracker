@@ -1,7 +1,5 @@
 //
-//  TodayViewController.swift
-//  CoronaTrackerWidget
-//
+//  Corona Tracker
 //  Created by Piotr Ożóg on 12/03/2020.
 //  Copyright © 2020 Samabox. All rights reserved.
 //
@@ -12,46 +10,46 @@ import NotificationCenter
 class TodayViewController: UIViewController, NCWidgetProviding {
 	static let numberPercentSwitchInterval: TimeInterval = 3 /// Seconds
 
+	@IBOutlet private var worldwideTitleLabel: UILabel!
+	@IBOutlet private var confirmedLabel: UILabel!
+	@IBOutlet private var confirmedCountLabel: UILabel!
+	@IBOutlet private var recoveredLabel: UILabel!
+	@IBOutlet private var recoveredCountLabel: UILabel!
+	@IBOutlet private var deathsLabel: UILabel!
+	@IBOutlet private var deathsCountLabel: UILabel!
+	@IBOutlet private var dataViews: [UIView]!
+	@IBOutlet private var dataLabels: [UILabel]!
+	@IBOutlet private var activityIndicatorView: UIActivityIndicatorView!
+	@IBOutlet private var updateTimeLabel: UILabel!
+
 	private var report: Report?
 	private var showPercents = false
 	private var switchPercentsTask: DispatchWorkItem?
 
-	@IBOutlet var worldwideTitleLabel: UILabel!
-	@IBOutlet var confirmedLabel: UILabel!
-	@IBOutlet var confirmedCountLabel: UILabel!
-	@IBOutlet var recoveredLabel: UILabel!
-	@IBOutlet var recoveredCountLabel: UILabel!
-	@IBOutlet var deathsLabel: UILabel!
-	@IBOutlet var deathsCountLabel: UILabel!
-	@IBOutlet var dataViews: [UIView]!
-	@IBOutlet var dataLabels: [UILabel]!
-    @IBOutlet var activityIndicatorView: UIActivityIndicatorView!
-	@IBOutlet var updateTimeLabel: UILabel!
+	override func viewDidLoad() {
+		super.viewDidLoad()
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+		initializeView()
 
-        initializeView()
-
-		DataManager.instance.load { [weak self] success in
-			self?.report = DataManager.instance.world.report
+		DataManager.shared.load { [weak self] _ in
+			self?.report = DataManager.shared.world.report
 			self?.update()
 		}
-    }
+	}
 
-    func widgetPerformUpdate(completionHandler: (@escaping (NCUpdateResult) -> Void)) {
-        activityIndicatorView.startAnimating()
+	func widgetPerformUpdate(completionHandler: (@escaping (NCUpdateResult) -> Void)) {
+		activityIndicatorView.startAnimating()
 		updateTimeLabel.isHidden = true
-        DataManager.instance.download { [weak self] success in
-            completionHandler(success ? NCUpdateResult.newData : NCUpdateResult.failed)
-            DataManager.instance.load { [weak self] success in
-				self?.report = DataManager.instance.world.report
-                self?.activityIndicatorView.stopAnimating()
+		DataManager.shared.download { [weak self] success in
+			completionHandler(success ? NCUpdateResult.newData : NCUpdateResult.failed)
+			DataManager.shared.load { [weak self] _ in
+				self?.report = DataManager.shared.world.report
+				self?.activityIndicatorView.stopAnimating()
 				self?.updateTimeLabel.isHidden = false
-                self?.update()
-            }
-        }
-    }
+				self?.update()
+			}
+		}
+	}
 
 	private func initializeView() {
 		dataViews.forEach { view in
@@ -66,15 +64,15 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 		}
 
 		worldwideTitleLabel.text = L10n.Region.world
-		confirmedLabel.text = L10n.Case.confirmed
-		recoveredLabel.text = L10n.Case.recovered
-		deathsLabel.text = L10n.Case.deaths
+		confirmedLabel.text = L10n.Case.confirmed.uppercased()
+		recoveredLabel.text = L10n.Case.recovered.uppercased()
+		deathsLabel.text = L10n.Case.deaths.uppercased()
 	}
 
-    private func update() {
-        guard let report = report else {
-            return
-        }
+	private func update() {
+		guard let report = report else {
+			return
+		}
 
 		view.transition { [weak self] in
 			self?.confirmedCountLabel.text = report.stat.confirmedCountString
@@ -84,7 +82,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
 		}
 
 		updateStats()
-    }
+	}
 
 	private func updateStats(reset: Bool = false) {
 		switchPercentsTask?.cancel()
