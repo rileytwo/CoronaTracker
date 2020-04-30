@@ -60,8 +60,7 @@ public class Region: Codable {
 
 		/// If the delta today is less than 5% of yesterday's, then today's data is most likely incomplete
 		if Double(confirmedDeltaToday) < Double(confirmedDeltaYesterday) * 0.05 {
-			guard let nextToLastDate = dates.popLast(),
-				let nextToLastStat = timeSeries.series[nextToLastDate] else { return nil }
+			guard let nextToLastStat = nextToLastStat else { return nil }
 
 			yesterdayStat = nextToLastStat
 		}
@@ -120,7 +119,7 @@ extension Region {
 	}
 
 	public func find(subRegionName: String) -> Region? {
-		return subRegions.first { $0.name == subRegionName }
+		subRegions.first { $0.name == subRegionName }
 	}
 
 	public func add(subRegions: [Region], addSubData: Bool) {
